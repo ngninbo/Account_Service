@@ -1,0 +1,19 @@
+# Project exclude paths
+/.gradle/
+/Account Service/task/build/
+/Account Service/task/out/
+/Account Service/task/out/production/classes/
+/Topics/Debugging techniques/Find the error/out/
+/Topics/Debugging techniques/Find the error/out/production/classes/
+/Topics/Debugging techniques/Theory/out/
+/Topics/Debugging techniques/Theory/out/production/classes/
+/Topics/Declaring a method/Calculating factorials/out/
+/Topics/Declaring a method/Calculating factorials/out/production/classes/
+/Topics/Introduction to generic programming/Correct the program/out/
+/Topics/Introduction to generic programming/Correct the program/out/production/classes/
+/Topics/NPE/Avoid NPE with strings/out/
+/Topics/NPE/Avoid NPE with strings/out/production/classes/
+/Topics/String/Check burgs/out/
+/Topics/String/Check burgs/out/production/classes/
+/Topics/The for-loop/The product of numbers from a to b/out/
+/Topics/The for-loop/The product of numbers from a to b/out/production/classes/

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <bytecodeTargetLevel target="17">
+      <module name="Account_Service.Account_Service-task-build-classes-java.main" target="11" />
+      <module name="Account_Service.Account_Service-task-build-generated-sources-annotationProcessor-java.main" target="11" />
+      <module name="Account_Service.Account_Service-task-build-generated-sources-headers-java.main" target="11" />
+      <module name="Account_Service.Account_Service-task-build-reports-tests.main" target="11" />
+      <module name="Account_Service.Account_Service-task-build-test-results.main" target="11" />
+      <module name="Account_Service.Account_Service-task-build-tmp.main" target="11" />
+      <module name="Account_Service.Account_Service-task.main" target="11" />
+      <module name="Account_Service.Topics-Abstract_class-IntBinaryOperation.main" target="11" />
+      <module name="Account_Service.Topics-Abstract_class-Shape_hierarchy.main" target="11" />
+      <module name="Account_Service.Topics-Abstract_class-Theory.main" target="11" />
+      <module name="Account_Service.Topics-Abstract_class-Users_and_WebSites.main" target="11" />
+      <module name="Account_Service.Topics-Debugging_techniques-Find_the_error.main" target="11" />
+      <module name="Account_Service.Topics-Debugging_techniques-Log_events.main" target="11" />
+      <module name="Account_Service.Topics-Debugging_techniques-Theory.main" target="11" />
+      <module name="Account_Service.Topics-Declaring_a_method-Calculating_factorials.main" target="11" />
+      <module name="Account_Service.Topics-Declaring_a_method-The_sign_of_a_number.main" target="11" />
+      <module name="Account_Service.Topics-Declaring_a_method-Theory.main" target="11" />
+      <module name="Account_Service.Topics-Declaring_a_method-Vowel_or_not.main" target="11" />
+      <module name="Account_Service.Topics-Introduction_to_generic_programming-Correct_the_program.main" target="11" />
+      <module name="Account_Service.Topics-Introduction_to_generic_programming-Pastry_packing_optimization.main" target="11" />
+      <module name="Account_Service.Topics-Introduction_to_generic_programming-Theory.main" target="11" />
+      <module name="Account_Service.Topics-NPE-Avoid_NPE_with_strings.main" target="11" />
+      <module name="Account_Service.Topics-NPE-Return_empty_string_when_argument_is_null.main" target="11" />
+      <module name="Account_Service.Topics-NPE-Theory.main" target="11" />
+      <module name="Account_Service.Topics-String-Check_burgs.main" target="11" />
+      <module name="Account_Service.Topics-String-Theory.main" target="11" />
+      <module name="Account_Service.Topics-The_for-loop-Size_of_parts.main" target="11" />
+      <module name="Account_Service.Topics-The_for-loop-The_product_of_numbers_from_a_to_b.main" target="11" />
+      <module name="Account_Service.Topics-The_for-loop-Theory.main" target="11" />
+      <module name="Account_Service.util.main" target="11" />
+    </bytecodeTargetLevel>
+  </component>
+</project>
