@@ -1,9 +1,9 @@
 package account.controller;
 
 import account.domain.PasswordChangeResponse;
-import account.exception.AccountServiceException;
+import account.util.exception.AccountServiceException;
+import account.util.exception.PasswordUpdateException;
 import account.domain.UserDto;
-import account.exception.PasswordChangeException;
 import account.mapper.UserMapper;
 import account.model.PasswordChangeRequest;
 import account.model.User;
@@ -48,22 +48,12 @@ public class UserController {
         return ResponseEntity.ok(mapper.toDto(userService.save(user)));
     }
 
-    @GetMapping(path = "/empl/payment")
-    public ResponseEntity<UserDto> authenticate(@AuthenticationPrincipal UserDetails userDetails) {
-        if (!userDetails.isEnabled()) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        } else {
-            var currentUser = userService.findByEmail(userDetails.getUsername());
-            return ResponseEntity.ok(mapper.toDto(currentUser.orElseThrow()));
-        }
-    }
-
     @PostMapping(path = "/auth/changepass", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<PasswordChangeResponse> changePassword(@Valid @RequestBody PasswordChangeRequest request,
-                                                                 @AuthenticationPrincipal UserDetails userDetails) throws PasswordChangeException {
+                                                                 @AuthenticationPrincipal UserDetails userDetails) throws PasswordUpdateException {
 
         if (encoder.matches(request.getPassword(), userDetails.getPassword())) {
-            throw new PasswordChangeException("The passwords must be different!");
+            throw new PasswordUpdateException("The passwords must be different!");
         }
 
         var currentUser = userService.findByEmail(userDetails.getUsername()).orElseThrow();

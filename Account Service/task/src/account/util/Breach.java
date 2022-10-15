@@ -1,4 +1,4 @@
-package account.domain;
+package account.util;
 
 import java.util.List;
 

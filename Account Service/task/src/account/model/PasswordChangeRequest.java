@@ -1,6 +1,6 @@
 package account.model;
 
-import account.domain.Breach;
+import account.util.Breach;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.AssertFalse;

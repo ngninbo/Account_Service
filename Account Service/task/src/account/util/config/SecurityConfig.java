@@ -1,4 +1,4 @@
-package account.config;
+package account.util.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -40,9 +40,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .csrf().disable().headers().frameOptions().disable() // for Postman, the H2 console
                 .and()
                 .authorizeRequests() // manage access
-                .mvcMatchers(HttpMethod.GET, "/api/empl/payment").hasRole("USER")
+                .mvcMatchers(HttpMethod.GET, "/api/empl/payment", "/api/empl/payment/*").hasRole("USER")
                 .mvcMatchers(HttpMethod.POST, "/api/auth/changepass").hasRole("USER")
-                .antMatchers(HttpMethod.POST, "/api/signup").permitAll()
+                .antMatchers(HttpMethod.PUT, "/api/acct/payments").permitAll()
+                .antMatchers(HttpMethod.POST, "/api/signup", "/api/acct/payments").permitAll()
                 // other matchers
                 .and()
                 .sessionManagement()

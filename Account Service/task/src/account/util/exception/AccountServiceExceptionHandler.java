@@ -1,8 +1,6 @@
-package account.config;
+package account.util.exception;
 
 import account.domain.AccountServiceCustomErrorMessage;
-import account.exception.AccountServiceException;
-import account.exception.PasswordChangeException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -10,13 +8,14 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.ConstraintViolationException;
 import java.time.LocalDateTime;
 
 @ControllerAdvice
 public class AccountServiceExceptionHandler {
 
     @ExceptionHandler({AccountServiceException.class})
-    public ResponseEntity<AccountServiceCustomErrorMessage> handleBadRequest(AccountServiceException e, HttpServletRequest request) {
+    public ResponseEntity<AccountServiceCustomErrorMessage> handleBadRequest(Exception e, HttpServletRequest request) {
         AccountServiceCustomErrorMessage body = new AccountServiceCustomErrorMessage(
                 LocalDateTime.now().toString(),
                 HttpStatus.BAD_REQUEST.value(),
@@ -38,8 +37,12 @@ public class AccountServiceExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler({PasswordChangeException.class})
-    public ResponseEntity<AccountServiceCustomErrorMessage> handleChangeException(PasswordChangeException exception,
+    @ExceptionHandler({
+            PasswordUpdateException.class,
+            PaymentSavingException.class,
+            PaymentNotFoundException.class,
+            ConstraintViolationException.class})
+    public ResponseEntity<AccountServiceCustomErrorMessage> handleChangeException(Exception exception,
                                                                                   HttpServletRequest request){
         AccountServiceCustomErrorMessage body = new AccountServiceCustomErrorMessage(
                 LocalDateTime.now().toString(),

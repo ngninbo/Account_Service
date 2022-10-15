@@ -1,6 +1,6 @@
 package account.model;
 
-import account.domain.Breach;
+import account.util.Breach;
 
 import javax.persistence.*;
 import javax.validation.constraints.*;
@@ -14,16 +14,20 @@ public class User {
     @GeneratedValue(strategy = GenerationType.AUTO, generator = "sequence")
     @Column(name = "user_id")
     private Long id;
+
     @NotEmpty(message = "The user name must not be empty")
     private String name;
+
     @NotEmpty(message = "last name must not be empty")
     private String lastname;
+
     @NotEmpty(message = "Email must not be empty")
     @Pattern(regexp = ".*@acme\\.com", message = "Email from given domain not allowed")
     private String email;
-    @NotNull
 
+    @NotNull
     private String password;
+
     private String role;
 
     public User() {

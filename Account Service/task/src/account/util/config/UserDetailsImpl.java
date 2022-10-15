@@ -1,4 +1,4 @@
-package account.mapper;
+package account.util.config;
 
 import account.model.User;
 import org.springframework.security.core.GrantedAuthority;

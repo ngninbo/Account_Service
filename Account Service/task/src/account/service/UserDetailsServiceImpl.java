@@ -1,6 +1,6 @@
 package account.service;
 
-import account.mapper.UserDetailsImpl;
+import account.util.config.UserDetailsImpl;
 import account.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;

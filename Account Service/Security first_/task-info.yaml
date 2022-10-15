@@ -637,94 +637,6 @@ files:
         }
     }
   learner_created: true
-- name: src/account/config/SecurityConfig.java
-  visible: true
-  text: |
-    package account.config;
-
-    import org.springframework.beans.factory.annotation.Autowired;
-    import org.springframework.context.annotation.Bean;
-    import org.springframework.context.annotation.Configuration;
-    import org.springframework.http.HttpMethod;
-    import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-    import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-    import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-    import org.springframework.security.config.http.SessionCreationPolicy;
-    import org.springframework.security.core.userdetails.UserDetailsService;
-    import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-    import org.springframework.security.crypto.password.PasswordEncoder;
-
-    @Configuration
-    public class SecurityConfig extends WebSecurityConfigurerAdapter {
-
-        private final UserDetailsService userDetailsService;
-        private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
-
-        @Autowired
-        public SecurityConfig(UserDetailsService userDetailsService, RestAuthenticationEntryPoint entryPoint) {
-            this.userDetailsService = userDetailsService;
-            this.restAuthenticationEntryPoint = entryPoint;
-        }
-
-        @Override
-        protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-            auth
-                    .userDetailsService(userDetailsService)
-                    .passwordEncoder(getEncoder());
-        }
-
-        @Override
-        protected void configure(HttpSecurity http) throws Exception {
-            http.httpBasic()
-                    .authenticationEntryPoint(restAuthenticationEntryPoint) // Handle auth error
-                    .and()
-                    .csrf().disable().headers().frameOptions().disable() // for Postman, the H2 console
-                    .and()
-                    .authorizeRequests() // manage access
-                    .mvcMatchers(HttpMethod.GET, "/api/empl/payment").hasRole("USER")
-                    .antMatchers(HttpMethod.POST, "/api/signup").permitAll()
-                    // other matchers
-                    .and()
-                    .sessionManagement()
-                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS); // no session
-        }
-
-        @Bean
-        public PasswordEncoder getEncoder() {
-            return new BCryptPasswordEncoder();
-        }
-    }
-  learner_created: true
-- name: src/account/config/AccountServiceExceptionHandler.java
-  visible: true
-  text: |
-    package account.config;
-
-    import account.domain.AccountServiceCustomErrorMessage;
-    import account.exception.UserExistException;
-    import org.springframework.http.HttpStatus;
-    import org.springframework.http.ResponseEntity;
-    import org.springframework.web.bind.annotation.ControllerAdvice;
-    import org.springframework.web.bind.annotation.ExceptionHandler;
-
-    import javax.servlet.http.HttpServletRequest;
-    import java.time.LocalDateTime;
-
-    @ControllerAdvice
-    public class AccountServiceExceptionHandler {
-
-        @ExceptionHandler(UserExistException.class)
-        public ResponseEntity<AccountServiceCustomErrorMessage> handleBadRequest(UserExistException e, HttpServletRequest request) {
-            AccountServiceCustomErrorMessage body = new AccountServiceCustomErrorMessage(
-                    LocalDateTime.now().toString(),
-                    HttpStatus.BAD_REQUEST.value(),
-                    e.getMessage(),
-                    request.getRequestURI());
-
-            return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
-        }
-    }
-  learner_created: true
 - name: src/account/service/UserDetailsServiceImpl.java
   visible: true
   text: |
@@ -875,67 +787,6 @@ files:
         Optional<User> findByEmail(String email);
     }
   learner_created: true
-- name: src/account/mapper/UserDetailsImpl.java
-  visible: true
-  text: |
-    package account.mapper;
-
-    import account.model.User;
-    import org.springframework.security.core.GrantedAuthority;
-    import org.springframework.security.core.authority.SimpleGrantedAuthority;
-    import org.springframework.security.core.userdetails.UserDetails;
-
-    import java.util.Collection;
-    import java.util.List;
-
-    public class UserDetailsImpl implements UserDetails {
-
-        private final String email;
-        private final String password;
-        private final List<GrantedAuthority> rolesAndAuthorities;
-
-        public UserDetailsImpl(User user) {
-            this.email = user.getEmail();
-            this.password = user.getPassword();
-            this.rolesAndAuthorities = List.of(new SimpleGrantedAuthority(user.getRole()));
-        }
-
-        @Override
-        public Collection<? extends GrantedAuthority> getAuthorities() {
-            return rolesAndAuthorities;
-        }
-
-        @Override
-        public String getPassword() {
-            return password;
-        }
-
-        @Override
-        public String getUsername() {
-            return email;
-        }
-
-        @Override
-        public boolean isAccountNonExpired() {
-            return true;
-        }
-
-        @Override
-        public boolean isAccountNonLocked() {
-            return true;
-        }
-
-        @Override
-        public boolean isCredentialsNonExpired() {
-            return true;
-        }
-
-        @Override
-        public boolean isEnabled() {
-            return true;
-        }
-    }
-  learner_created: true
 - name: src/account/controller/UserController.java
   visible: true
   text: |
@@ -1011,30 +862,6 @@ files:
 
         public UserDto toDto(User user) {
             return new UserDto(user.getId(), user.getName(), user.getLastname(), user.getEmail());
-        }
-    }
-  learner_created: true
-- name: src/account/config/RestAuthenticationEntryPoint.java
-  visible: true
-  text: |
-    package account.config;
-
-    import org.springframework.security.core.AuthenticationException;
-    import org.springframework.security.web.AuthenticationEntryPoint;
-    import org.springframework.stereotype.Component;
-
-    import javax.servlet.http.HttpServletRequest;
-    import javax.servlet.http.HttpServletResponse;
-    import java.io.IOException;
-
-    @Component
-    public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
-
-        @Override
-        public void commence(HttpServletRequest request,
-                             HttpServletResponse response,
-                             AuthenticationException authException) throws IOException {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, authException.getMessage());
         }
     }
   learner_created: true
@@ -1173,7 +1000,98 @@ files:
 - name: src/account/domain/Breach.java
   visible: true
   learner_created: true
-- name: src/account/exception/AccountServiceException.java
+- name: src/account/model/PasswordChangeRequest.java
+  visible: true
+  learner_created: true
+- name: src/account/domain/PasswordChangeResponse.java
+  visible: true
+  learner_created: true
+- name: src/account/util/config/SecurityConfig.java
+  visible: true
+  text: |
+    package account.config;
+
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.context.annotation.Bean;
+    import org.springframework.context.annotation.Configuration;
+    import org.springframework.http.HttpMethod;
+    import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+    import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+    import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+    import org.springframework.security.config.http.SessionCreationPolicy;
+    import org.springframework.security.core.userdetails.UserDetailsService;
+    import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+    import org.springframework.security.crypto.password.PasswordEncoder;
+
+    @Configuration
+    public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+        private final UserDetailsService userDetailsService;
+        private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+
+        @Autowired
+        public SecurityConfig(UserDetailsService userDetailsService, RestAuthenticationEntryPoint entryPoint) {
+            this.userDetailsService = userDetailsService;
+            this.restAuthenticationEntryPoint = entryPoint;
+        }
+
+        @Override
+        protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+            auth
+                    .userDetailsService(userDetailsService)
+                    .passwordEncoder(getEncoder());
+        }
+
+        @Override
+        protected void configure(HttpSecurity http) throws Exception {
+            http.httpBasic()
+                    .authenticationEntryPoint(restAuthenticationEntryPoint) // Handle auth error
+                    .and()
+                    .csrf().disable().headers().frameOptions().disable() // for Postman, the H2 console
+                    .and()
+                    .authorizeRequests() // manage access
+                    .mvcMatchers(HttpMethod.GET, "/api/empl/payment").hasRole("USER")
+                    .antMatchers(HttpMethod.POST, "/api/signup").permitAll()
+                    // other matchers
+                    .and()
+                    .sessionManagement()
+                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS); // no session
+        }
+
+        @Bean
+        public PasswordEncoder getEncoder() {
+            return new BCryptPasswordEncoder();
+        }
+    }
+  learner_created: true
+- name: src/account/util/config/RestAuthenticationEntryPoint.java
+  visible: true
+  text: |
+    package account.config;
+
+    import org.springframework.security.core.AuthenticationException;
+    import org.springframework.security.web.AuthenticationEntryPoint;
+    import org.springframework.stereotype.Component;
+
+    import javax.servlet.http.HttpServletRequest;
+    import javax.servlet.http.HttpServletResponse;
+    import java.io.IOException;
+
+    @Component
+    public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
+
+        @Override
+        public void commence(HttpServletRequest request,
+                             HttpServletResponse response,
+                             AuthenticationException authException) throws IOException {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, authException.getMessage());
+        }
+    }
+  learner_created: true
+- name: src/account/util/config/util/PasswordValidator.java
+  visible: true
+  learner_created: true
+- name: src/account/util/exception/AccountServiceException.java
   visible: true
   text: |
     package account.exception;
@@ -1189,21 +1107,103 @@ files:
         }
     }
   learner_created: true
-- name: src/account/model/PasswordChangeRequest.java
+- name: src/account/util/exception/PasswordChangeException.java
   visible: true
   learner_created: true
-- name: src/account/domain/PasswordChangeResponse.java
+- name: src/account/util/exception/AccountServiceExceptionHandler.java
   visible: true
+  text: |
+    package account.config;
+
+    import account.domain.AccountServiceCustomErrorMessage;
+    import account.exception.UserExistException;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.ControllerAdvice;
+    import org.springframework.web.bind.annotation.ExceptionHandler;
+
+    import javax.servlet.http.HttpServletRequest;
+    import java.time.LocalDateTime;
+
+    @ControllerAdvice
+    public class AccountServiceExceptionHandler {
+
+        @ExceptionHandler(UserExistException.class)
+        public ResponseEntity<AccountServiceCustomErrorMessage> handleBadRequest(UserExistException e, HttpServletRequest request) {
+            AccountServiceCustomErrorMessage body = new AccountServiceCustomErrorMessage(
+                    LocalDateTime.now().toString(),
+                    HttpStatus.BAD_REQUEST.value(),
+                    e.getMessage(),
+                    request.getRequestURI());
+
+            return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+        }
+    }
   learner_created: true
-- name: src/account/config/util/PasswordValidator.java
+- name: src/account/util/config/UserDetailsImpl.java
   visible: true
+  text: |
+    package account.mapper;
+
+    import account.model.User;
+    import org.springframework.security.core.GrantedAuthority;
+    import org.springframework.security.core.authority.SimpleGrantedAuthority;
+    import org.springframework.security.core.userdetails.UserDetails;
+
+    import java.util.Collection;
+    import java.util.List;
+
+    public class UserDetailsImpl implements UserDetails {
+
+        private final String email;
+        private final String password;
+        private final List<GrantedAuthority> rolesAndAuthorities;
+
+        public UserDetailsImpl(User user) {
+            this.email = user.getEmail();
+            this.password = user.getPassword();
+            this.rolesAndAuthorities = List.of(new SimpleGrantedAuthority(user.getRole()));
+        }
+
+        @Override
+        public Collection<? extends GrantedAuthority> getAuthorities() {
+            return rolesAndAuthorities;
+        }
+
+        @Override
+        public String getPassword() {
+            return password;
+        }
+
+        @Override
+        public String getUsername() {
+            return email;
+        }
+
+        @Override
+        public boolean isAccountNonExpired() {
+            return true;
+        }
+
+        @Override
+        public boolean isAccountNonLocked() {
+            return true;
+        }
+
+        @Override
+        public boolean isCredentialsNonExpired() {
+            return true;
+        }
+
+        @Override
+        public boolean isEnabled() {
+            return true;
+        }
+    }
   learner_created: true
-- name: src/account/exception/PasswordChangeException.java
-  visible: true
-  learner_created: true
-feedback_link: https://hyperskill.org/projects/217/stages/1088/implement#comment
+feedback_link: https://hyperskill.org/learn/step/16603#comment
 status: Solved
 feedback:
   message: Congratulations!
   time: Sat, 15 Oct 2022 04:27:43 UTC
-record: -1
+record: 3
