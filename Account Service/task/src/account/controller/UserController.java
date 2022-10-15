@@ -1,8 +1,11 @@
 package account.controller;
 
-import account.exception.UserExistException;
+import account.domain.PasswordChangeResponse;
+import account.exception.AccountServiceException;
 import account.domain.UserDto;
+import account.exception.PasswordChangeException;
 import account.mapper.UserMapper;
+import account.model.PasswordChangeRequest;
 import account.model.User;
 import account.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,10 +37,10 @@ public class UserController {
     }
 
     @PostMapping(path = "/auth/signup", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<UserDto> signup(@Valid @RequestBody User user) throws UserExistException {
+    public ResponseEntity<UserDto> signup(@Valid @RequestBody User user) throws AccountServiceException {
 
         if (userService.findByEmail(user.getEmail()).isPresent()) {
-            throw new UserExistException(HttpStatus.BAD_REQUEST.getReasonPhrase());
+            throw new AccountServiceException(HttpStatus.BAD_REQUEST.getReasonPhrase());
         }
 
         user.setPassword(encoder.encode(user.getPassword()));
@@ -53,5 +56,19 @@ public class UserController {
             var currentUser = userService.findByEmail(userDetails.getUsername());
             return ResponseEntity.ok(mapper.toDto(currentUser.orElseThrow()));
         }
+    }
+
+    @PostMapping(path = "/auth/changepass", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<PasswordChangeResponse> changePassword(@Valid @RequestBody PasswordChangeRequest request,
+                                                                 @AuthenticationPrincipal UserDetails userDetails) throws PasswordChangeException {
+
+        if (encoder.matches(request.getPassword(), userDetails.getPassword())) {
+            throw new PasswordChangeException("The passwords must be different!");
+        }
+
+        var currentUser = userService.findByEmail(userDetails.getUsername()).orElseThrow();
+        currentUser.setPassword(encoder.encode(request.getPassword()));
+        currentUser = userService.save(currentUser);
+        return ResponseEntity.ok(new PasswordChangeResponse(currentUser.getEmail().toLowerCase()));
     }
 }

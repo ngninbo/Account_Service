@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @Configuration
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
+    private static final int ENCODER_STRENGTH = 13;
     private final UserDetailsService userDetailsService;
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
 
@@ -40,6 +41,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .and()
                 .authorizeRequests() // manage access
                 .mvcMatchers(HttpMethod.GET, "/api/empl/payment").hasRole("USER")
+                .mvcMatchers(HttpMethod.POST, "/api/auth/changepass").hasRole("USER")
                 .antMatchers(HttpMethod.POST, "/api/signup").permitAll()
                 // other matchers
                 .and()
@@ -49,6 +51,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Bean
     public PasswordEncoder getEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(ENCODER_STRENGTH);
     }
 }

@@ -1,8 +1,9 @@
 package account.model;
 
+import account.domain.Breach;
+
 import javax.persistence.*;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.Pattern;
+import javax.validation.constraints.*;
 import java.util.Objects;
 
 @Entity
@@ -13,13 +14,15 @@ public class User {
     @GeneratedValue(strategy = GenerationType.AUTO, generator = "sequence")
     @Column(name = "user_id")
     private Long id;
-    @NotEmpty
+    @NotEmpty(message = "The user name must not be empty")
     private String name;
-    @NotEmpty
+    @NotEmpty(message = "last name must not be empty")
     private String lastname;
-    @Pattern(regexp = ".*@acme\\.com")
+    @NotEmpty(message = "Email must not be empty")
+    @Pattern(regexp = ".*@acme\\.com", message = "Email from given domain not allowed")
     private String email;
-    @NotEmpty
+    @NotNull
+
     private String password;
     private String role;
 
@@ -73,6 +76,16 @@ public class User {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    @AssertFalse(message = "The password is in the hacker's database!")
+    public boolean isBreached() {
+        return this.password != null && Breach.getBreachedPasswords().contains(this.password);
+    }
+
+    @AssertTrue(message = "The password length must be at least 12 chars!")
+    public boolean hasValideLength() {
+        return this.password != null && this.password.length() >= 12;
     }
 
     @Override
