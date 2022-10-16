@@ -9,8 +9,10 @@ import account.util.PaymentUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 public class PaymentMapper {
@@ -26,16 +28,22 @@ public class PaymentMapper {
 
 
         final Optional<User> employee = userService.findByEmail(request.getEmployee());
-        return new Payment(
-                employee.orElseThrow(),
-                request.getPeriod(),
-                request.getSalary());
+        return Payment.builder()
+                .employee(employee.orElseThrow())
+                .period(request.getPeriod())
+                .salary(request.getSalary())
+                .build();
     }
 
     public PaymentDto mapToDto(Payment payment) {
-        return new PaymentDto(payment.getEmployee().getName(),
-                payment.getEmployee().getLastname(),
-                PaymentUtil.convertMonthFromPeriodToString(payment.getPeriod()),
-                PaymentUtil.getFullSalary(payment.getSalary()));
+        return PaymentDto.builder().name(payment.getEmployee().getName())
+                .lastname(payment.getEmployee().getLastname())
+                .period(PaymentUtil.convertMonthFromPeriodToString(payment.getPeriod()))
+                .salary(PaymentUtil.getFullSalary(payment.getSalary()))
+                .build();
+    }
+
+    public List<PaymentDto> mapToList(List<Payment> payments) {
+        return payments.stream().map(this::mapToDto).collect(Collectors.toList());
     }
 }

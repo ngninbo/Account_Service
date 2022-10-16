@@ -59,6 +59,8 @@ public class UserController {
         var currentUser = userService.findByEmail(userDetails.getUsername()).orElseThrow();
         currentUser.setPassword(encoder.encode(request.getPassword()));
         currentUser = userService.save(currentUser);
-        return ResponseEntity.ok(new PasswordChangeResponse(currentUser.getEmail().toLowerCase()));
+        return ResponseEntity.ok(PasswordChangeResponse.builder()
+                .email(currentUser.getEmail().toLowerCase()).status(PasswordChangeResponse.DEFAULT_STATUS)
+                .build());
     }
 }

@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class PaymentService implements IPaymentService {
@@ -30,7 +29,7 @@ public class PaymentService implements IPaymentService {
     @Override
     public List<PaymentDto> findAllByEmail(String email) {
         final List<Payment> payments = this.paymentRepository.findAllByEmployee_EmailIgnoreCaseOrderByPeriodDesc(email);
-        return payments.isEmpty() ? List.of() : payments.stream().map(paymentMapper::mapToDto).collect(Collectors.toList());
+        return payments.isEmpty() ? List.of() : paymentMapper.mapToList(payments);
     }
 
     @Override

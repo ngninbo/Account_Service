@@ -1,6 +1,6 @@
 package account.model;
 
-import account.util.Breach;
+import account.util.Blacklist;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.AssertFalse;
@@ -16,7 +16,7 @@ public class PasswordChangeRequest {
 
     @AssertFalse(message = "The password is in the hacker's database!")
     public boolean isBreached() {
-        return this.password != null && Breach.getBreachedPasswords().contains(this.password);
+        return this.password != null && Blacklist.contains(this.password);
     }
 
     @AssertTrue(message = "Password length must be 12 chars minimum!")
