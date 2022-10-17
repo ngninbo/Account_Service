@@ -7,6 +7,11 @@ import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import javax.validation.constraints.*;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 @Entity
 @Data
@@ -33,7 +38,8 @@ public class User {
     @NotNull
     private String password;
 
-    private String role;
+    @ManyToMany(fetch = FetchType.EAGER)
+    private Set<Group> groups = new LinkedHashSet<>();
 
     @AssertFalse(message = "The password is in the hacker's database!")
     public boolean isBreached() {
@@ -43,5 +49,17 @@ public class User {
     @AssertTrue(message = "The password length must be at least 12 chars!")
     public boolean hasValideLength() {
         return this.password != null && this.password.length() >= 12;
+    }
+
+    public boolean isAdmin() {
+        return this.groups.stream().map(Group::getRole).collect(Collectors.toList()).contains(Role.ROLE_ADMINISTRATOR);
+    }
+
+    public boolean hasRole(Role role) {
+        return groups.stream().map(Group::getRole).anyMatch(role1 -> role1.equals(role));
+    }
+
+    public boolean isBusinessUser() {
+        return groups.stream().map(Group::getRole).collect(Collectors.toList()).containsAll(List.of(Role.ROLE_USER, Role.ROLE_ACCOUNTANT));
     }
 }

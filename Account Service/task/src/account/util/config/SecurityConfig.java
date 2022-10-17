@@ -11,6 +11,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.access.AccessDeniedHandler;
 
 @Configuration
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
@@ -34,24 +35,33 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.httpBasic()
+        http.exceptionHandling().accessDeniedHandler(accessDeniedHandler()).and()
+                .httpBasic()
                 .authenticationEntryPoint(restAuthenticationEntryPoint) // Handle auth error
                 .and()
                 .csrf().disable().headers().frameOptions().disable() // for Postman, the H2 console
                 .and()
                 .authorizeRequests() // manage access
-                .mvcMatchers(HttpMethod.GET, "/api/empl/payment", "/api/empl/payment/*").hasRole("USER")
-                .mvcMatchers(HttpMethod.POST, "/api/auth/changepass").hasRole("USER")
-                .antMatchers(HttpMethod.PUT, "/api/acct/payments").permitAll()
-                .antMatchers(HttpMethod.POST, "/api/signup", "/api/acct/payments").permitAll()
+                .mvcMatchers("/api/admin/**").hasRole("ADMINISTRATOR")
+                .mvcMatchers("/api/acct/**").hasRole("ACCOUNTANT")
+                .mvcMatchers(HttpMethod.POST, "/api/auth/changepass").hasAnyRole("USER", "ACCOUNTANT", "ADMINISTRATOR")
+                .mvcMatchers(HttpMethod.GET, "/api/empl/payment", "/api/empl/payment/*").hasAnyRole("USER", "ACCOUNTANT")
+                .antMatchers(HttpMethod.POST, "/api/signup").permitAll()
                 // other matchers
                 .and()
                 .sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS); // no session
     }
 
+
+
     @Bean
     public PasswordEncoder getEncoder() {
         return new BCryptPasswordEncoder(ENCODER_STRENGTH);
+    }
+
+    @Bean
+    public AccessDeniedHandler accessDeniedHandler(){
+        return new CustomAccessDeniedHandler();
     }
 }

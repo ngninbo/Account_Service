@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class PaymentService implements IPaymentService {
@@ -33,14 +34,11 @@ public class PaymentService implements IPaymentService {
     }
 
     @Override
-    public List<PaymentDto> findByEmailAndPeriod(String email, String period) throws PaymentNotFoundException {
+    public PaymentDto findByEmailAndPeriod(String email, String period) throws PaymentNotFoundException {
 
         try {
-            var  payment = paymentRepository.findByEmployee_EmailIgnoreCaseAndPeriod(email, period);
-            if (payment.isEmpty()) {
-                return List.of();
-            }
-            return List.of(paymentMapper.mapToDto(payment.get()));
+            Payment  payment = paymentRepository.findByEmployee_EmailIgnoreCaseAndPeriod(email, period).orElseThrow();
+            return paymentMapper.mapToDto(payment);
         } catch (Exception e) {
             throw new PaymentNotFoundException("Payment not found!: " + e.getMessage());
         }
@@ -49,10 +47,18 @@ public class PaymentService implements IPaymentService {
     @Override
     @Transactional
     public PaymentResponse save(List<PaymentRequest> payments) throws PaymentSavingException {
+
+        for (int i = 1; i < payments.size(); i++) {
+            if (payments.get(i - 1).getPeriod().equals(payments.get(i).getPeriod())) {
+                throw new PaymentSavingException("Duplicated entry in payment list");
+            }
+        }
+
         try {
             for(PaymentRequest request: payments) {
-                var payment = paymentRepository.findByEmployee_EmailIgnoreCaseAndPeriod(request.getEmployee(), request.getPeriod());
+                Optional<Payment> payment = paymentRepository.findByEmployee_EmailIgnoreCaseAndPeriod(request.getEmployee(), request.getPeriod());
                 if (payment.isEmpty()) {
+                    validateRequest(request);
                     paymentRepository.save(paymentMapper.mapToPayment(request));
                 } else {
                     throw new PaymentSavingException("Period must be unique!");
@@ -68,6 +74,8 @@ public class PaymentService implements IPaymentService {
     @Transactional
     public PaymentResponse save(PaymentRequest request) throws PaymentSavingException {
 
+        validateRequest(request);
+
         try {
             var payment = paymentRepository.findByEmployee_EmailIgnoreCaseAndPeriod(
                     request.getEmployee(), request.getPeriod());
@@ -82,6 +90,26 @@ public class PaymentService implements IPaymentService {
             return new PaymentResponse("Updated successfully!");
         } catch (Exception e) {
             throw new PaymentSavingException(e.getMessage());
+        }
+    }
+
+    private boolean isValidPeriod(String period) {
+
+        if (period == null) {
+            return true;
+        }
+
+        int month = Integer.parseInt(period.split("-")[0]);
+        return month <= 0 || month >= 12;
+    }
+
+    private void validateRequest(PaymentRequest request) throws PaymentSavingException {
+        if (request.getSalary() < 0) {
+            throw new PaymentSavingException("Salary can not be negativ!");
+        }
+
+        if (isValidPeriod(request.getPeriod())) {
+            throw new PaymentSavingException("payment period is not valid!");
         }
     }
 }

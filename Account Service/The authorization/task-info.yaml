@@ -930,6 +930,1079 @@ files:
 
     }
   learner_created: false
+- name: src/account/domain/PasswordChangeResponse.java
+  visible: true
+  text: |
+    package account.domain;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Builder;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    @Data
+    @NoArgsConstructor
+    @Builder
+    @AllArgsConstructor
+    public class PasswordChangeResponse {
+
+        public static final String DEFAULT_STATUS = "The password has been updated successfully";
+
+        private String email;
+        private String status;
+    }
+  learner_created: true
+- name: src/account/service/PaymentService.java
+  visible: true
+  text: |
+    package account.service;
+
+    import account.domain.PaymentDto;
+    import account.domain.PaymentResponse;
+    import account.mapper.PaymentMapper;
+    import account.model.Payment;
+    import account.model.PaymentRequest;
+    import account.repository.PaymentRepository;
+    import account.util.exception.PaymentNotFoundException;
+    import account.util.exception.PaymentSavingException;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+
+    import javax.transaction.Transactional;
+    import java.util.List;
+
+    @Service
+    public class PaymentService implements IPaymentService {
+
+        private final PaymentRepository paymentRepository;
+        private final PaymentMapper paymentMapper;
+
+        @Autowired
+        public PaymentService(PaymentRepository paymentRepository, PaymentMapper paymentMapper) {
+            this.paymentRepository = paymentRepository;
+            this.paymentMapper = paymentMapper;
+        }
+
+        @Override
+        public List<PaymentDto> findAllByEmail(String email) {
+            final List<Payment> payments = this.paymentRepository.findAllByEmployee_EmailIgnoreCaseOrderByPeriodDesc(email);
+            return payments.isEmpty() ? List.of() : paymentMapper.mapToList(payments);
+        }
+
+        @Override
+        public List<PaymentDto> findByEmailAndPeriod(String email, String period) throws PaymentNotFoundException {
+
+            try {
+                var  payment = paymentRepository.findByEmployee_EmailIgnoreCaseAndPeriod(email, period);
+                if (payment.isEmpty()) {
+                    return List.of();
+                }
+                return List.of(paymentMapper.mapToDto(payment.get()));
+            } catch (Exception e) {
+                throw new PaymentNotFoundException("Payment not found!: " + e.getMessage());
+            }
+        }
+
+        @Override
+        @Transactional
+        public PaymentResponse save(List<PaymentRequest> payments) throws PaymentSavingException {
+            try {
+                for(PaymentRequest request: payments) {
+                    var payment = paymentRepository.findByEmployee_EmailIgnoreCaseAndPeriod(request.getEmployee(), request.getPeriod());
+                    if (payment.isEmpty()) {
+                        paymentRepository.save(paymentMapper.mapToPayment(request));
+                    } else {
+                        throw new PaymentSavingException("Period must be unique!");
+                    }
+                }
+                return new PaymentResponse();
+            } catch (Exception e) {
+                throw new PaymentSavingException("An Error occurred while updating!: " + e.getMessage());
+            }
+        }
+
+        @Override
+        @Transactional
+        public PaymentResponse save(PaymentRequest request) throws PaymentSavingException {
+
+            try {
+                var payment = paymentRepository.findByEmployee_EmailIgnoreCaseAndPeriod(
+                        request.getEmployee(), request.getPeriod());
+                if (payment.isEmpty()){
+                    paymentRepository.save(paymentMapper.mapToPayment(request));
+                } else {
+                    var tmp = payment.get();
+                    tmp.setSalary(request.getSalary());
+                    paymentRepository.save(tmp);
+                }
+
+                return new PaymentResponse("Updated successfully!");
+            } catch (Exception e) {
+                throw new PaymentSavingException(e.getMessage());
+            }
+        }
+    }
+  learner_created: true
+- name: src/account/model/User.java
+  visible: true
+  text: |
+    package account.model;
+
+    import account.util.Blacklist;
+    import lombok.AllArgsConstructor;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    import javax.persistence.*;
+    import javax.validation.constraints.*;
+
+    @Entity
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @SequenceGenerator(name = "sequence", sequenceName = "UserSeq")
+    public class User {
+
+        @Id
+        @GeneratedValue(strategy = GenerationType.AUTO, generator = "sequence")
+        @Column(name = "user_id")
+        private Long id;
+
+        @NotEmpty(message = "The user name must not be empty")
+        private String name;
+
+        @NotEmpty(message = "last name must not be empty")
+        private String lastname;
+
+        @NotEmpty(message = "Email must not be empty")
+        @Pattern(regexp = ".*@acme\\.com", message = "Email from given domain not allowed")
+        private String email;
+
+        @NotNull
+        private String password;
+
+        private String role;
+
+        @AssertFalse(message = "The password is in the hacker's database!")
+        public boolean isBreached() {
+            return this.password != null && Blacklist.contains(this.password);
+        }
+
+        @AssertTrue(message = "The password length must be at least 12 chars!")
+        public boolean hasValideLength() {
+            return this.password != null && this.password.length() >= 12;
+        }
+    }
+  learner_created: true
+- name: src/account/service/UserDetailsServiceImpl.java
+  visible: true
+  text: |
+    package account.service;
+
+    import account.util.config.UserDetailsImpl;
+    import account.model.User;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.security.core.userdetails.UserDetails;
+    import org.springframework.security.core.userdetails.UserDetailsService;
+    import org.springframework.security.core.userdetails.UsernameNotFoundException;
+    import org.springframework.stereotype.Service;
+
+    import java.util.Optional;
+
+    @Service
+    public class UserDetailsServiceImpl implements UserDetailsService {
+
+        private final UserService userService;
+
+        public UserDetailsServiceImpl(@Autowired UserService userService) {
+            this.userService = userService;
+        }
+
+        @Override
+        public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+            Optional<User> user = userService.findByEmail(email);
+            if (user.isPresent()) {
+                return new UserDetailsImpl(user.get());
+            } else {
+                throw new UsernameNotFoundException("Not found " + email);
+            }
+        }
+    }
+  learner_created: true
+- name: src/account/model/PaymentRequest.java
+  visible: true
+  text: |
+    package account.model;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    import javax.validation.constraints.AssertTrue;
+    import javax.validation.constraints.NotEmpty;
+    import javax.validation.constraints.NotNull;
+    import javax.validation.constraints.Pattern;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class PaymentRequest {
+
+        @NotEmpty(message = "employee email must not be empty")
+        private String employee;
+        @Pattern(regexp = "\\d{2}-\\d{4}", message = "Period has invalid format")
+        private String period;
+        @NotNull(message = "salary is incorrect")
+        private Long salary;
+
+        @AssertTrue(message = "payment period is not valid")
+        public boolean isValidPeriod() {
+
+            if (this.period == null) {
+                return false;
+            }
+
+            int month = Integer.parseInt(period.split("-")[0]);
+            return month > 0 && month < 12;
+        }
+
+        @AssertTrue(message = "Salary can not be negativ")
+        public boolean validateSalary() {
+            return this.salary != null && this.salary >= 0;
+        }
+    }
+  learner_created: true
+- name: src/account/util/exception/AccountServiceException.java
+  visible: true
+  text: |
+    package account.util.exception;
+
+    public class AccountServiceException extends Exception {
+
+        public AccountServiceException(String message) {
+            super(message);
+        }
+    }
+  learner_created: true
+- name: src/account/util/exception/PaymentSavingException.java
+  visible: true
+  text: |
+    package account.util.exception;
+
+    public class PaymentSavingException extends Exception {
+
+        public PaymentSavingException(String message) {
+            super(message);
+        }
+    }
+  learner_created: true
+- name: src/account/repository/PaymentRepository.java
+  visible: true
+  text: |
+    package account.repository;
+
+    import account.model.Payment;
+    import org.springframework.data.repository.CrudRepository;
+
+    import java.util.List;
+    import java.util.Optional;
+
+    public interface PaymentRepository extends CrudRepository<Payment, Long> {
+
+        List<Payment> findAllByEmployee_EmailIgnoreCaseOrderByPeriodDesc(String email);
+
+        Optional<Payment> findByEmployee_EmailIgnoreCaseAndPeriod(String employee, String period);
+    }
+  learner_created: true
+- name: src/account/util/config/SecurityConfig.java
+  visible: true
+  text: |
+    package account.util.config;
+
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.context.annotation.Bean;
+    import org.springframework.context.annotation.Configuration;
+    import org.springframework.http.HttpMethod;
+    import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+    import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+    import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+    import org.springframework.security.config.http.SessionCreationPolicy;
+    import org.springframework.security.core.userdetails.UserDetailsService;
+    import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+    import org.springframework.security.crypto.password.PasswordEncoder;
+
+    @Configuration
+    public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+        private static final int ENCODER_STRENGTH = 13;
+        private final UserDetailsService userDetailsService;
+        private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+
+        @Autowired
+        public SecurityConfig(UserDetailsService userDetailsService, RestAuthenticationEntryPoint entryPoint) {
+            this.userDetailsService = userDetailsService;
+            this.restAuthenticationEntryPoint = entryPoint;
+        }
+
+        @Override
+        protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+            auth
+                    .userDetailsService(userDetailsService)
+                    .passwordEncoder(getEncoder());
+        }
+
+        @Override
+        protected void configure(HttpSecurity http) throws Exception {
+            http.httpBasic()
+                    .authenticationEntryPoint(restAuthenticationEntryPoint) // Handle auth error
+                    .and()
+                    .csrf().disable().headers().frameOptions().disable() // for Postman, the H2 console
+                    .and()
+                    .authorizeRequests() // manage access
+                    .mvcMatchers(HttpMethod.GET, "/api/empl/payment", "/api/empl/payment/*").hasRole("USER")
+                    .mvcMatchers(HttpMethod.POST, "/api/auth/changepass").hasRole("USER")
+                    .antMatchers(HttpMethod.PUT, "/api/acct/payments").permitAll()
+                    .antMatchers(HttpMethod.POST, "/api/signup", "/api/acct/payments").permitAll()
+                    // other matchers
+                    .and()
+                    .sessionManagement()
+                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS); // no session
+        }
+
+        @Bean
+        public PasswordEncoder getEncoder() {
+            return new BCryptPasswordEncoder(ENCODER_STRENGTH);
+        }
+    }
+  learner_created: true
+- name: src/account/mapper/PaymentMapper.java
+  visible: true
+  text: |
+    package account.mapper;
+
+    import account.domain.PaymentDto;
+    import account.model.Payment;
+    import account.model.PaymentRequest;
+    import account.model.User;
+    import account.service.UserService;
+    import account.util.PaymentUtil;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Component;
+
+    import java.util.List;
+    import java.util.NoSuchElementException;
+    import java.util.Optional;
+    import java.util.stream.Collectors;
+
+    @Component
+    public class PaymentMapper {
+
+        private final UserService userService;
+
+        @Autowired
+        public PaymentMapper(UserService userService) {
+            this.userService = userService;
+        }
+
+        public Payment mapToPayment(PaymentRequest request) throws NoSuchElementException {
+
+
+            final Optional<User> employee = userService.findByEmail(request.getEmployee());
+            return Payment.builder()
+                    .employee(employee.orElseThrow())
+                    .period(request.getPeriod())
+                    .salary(request.getSalary())
+                    .build();
+        }
+
+        public PaymentDto mapToDto(Payment payment) {
+            return PaymentDto.builder().name(payment.getEmployee().getName())
+                    .lastname(payment.getEmployee().getLastname())
+                    .period(PaymentUtil.convertMonthFromPeriodToString(payment.getPeriod()))
+                    .salary(PaymentUtil.getFullSalary(payment.getSalary()))
+                    .build();
+        }
+
+        public List<PaymentDto> mapToList(List<Payment> payments) {
+            return payments.stream().map(this::mapToDto).collect(Collectors.toList());
+        }
+    }
+  learner_created: true
+- name: src/account/util/Blacklist.java
+  visible: true
+  text: |
+    package account.util;
+
+    import java.util.Set;
+
+    public class Blacklist {
+
+        public static final Set<String> passwords = Set.of("PasswordForJanuary", "PasswordForFebruary", "PasswordForMarch", "PasswordForApril",
+                "PasswordForMay", "PasswordForJune", "PasswordForJuly", "PasswordForAugust",
+                "PasswordForSeptember", "PasswordForOctober", "PasswordForNovember", "PasswordForDecember");
+
+        public static boolean contains(String password) {
+            return passwords.contains(password);
+        }
+    }
+  learner_created: true
+- name: src/account/model/Payment.java
+  visible: true
+  text: |
+    package account.model;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Builder;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    import javax.persistence.*;
+
+    @Entity
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @SequenceGenerator(name = "sequencePayment", sequenceName = "PaymentSeq")
+    public class Payment {
+
+        @Id
+        @GeneratedValue(strategy = GenerationType.AUTO, generator = "sequencePayment")
+        private Long id;
+        @ManyToOne
+        @JoinColumn(name = "user_id")
+        private User employee;
+        private String period;
+        private Long salary;
+    }
+  learner_created: true
+- name: src/account/util/exception/AccountServiceExceptionHandler.java
+  visible: true
+  text: |
+    package account.util.exception;
+
+    import account.domain.AccountServiceCustomErrorMessage;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.MethodArgumentNotValidException;
+    import org.springframework.web.bind.annotation.ControllerAdvice;
+    import org.springframework.web.bind.annotation.ExceptionHandler;
+
+    import javax.servlet.http.HttpServletRequest;
+    import javax.validation.ConstraintViolationException;
+    import java.time.LocalDateTime;
+
+    @ControllerAdvice
+    public class AccountServiceExceptionHandler {
+
+        @ExceptionHandler({AccountServiceException.class})
+        public ResponseEntity<AccountServiceCustomErrorMessage> handleBadRequest(Exception e, HttpServletRequest request) {
+            AccountServiceCustomErrorMessage body = AccountServiceCustomErrorMessage.builder()
+                    .timestamp(LocalDateTime.now().toString())
+                    .status(HttpStatus.BAD_REQUEST.value())
+                    .error(e.getMessage())
+                    .message(AccountServiceCustomErrorMessage.DEFAULT_MESSAGE)
+                    .path(request.getRequestURI())
+                    .build();
+
+            return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+        }
+
+        @ExceptionHandler({MethodArgumentNotValidException.class})
+        public ResponseEntity<AccountServiceCustomErrorMessage> handleValidationError(MethodArgumentNotValidException e,
+                                                                                      HttpServletRequest request) {
+            AccountServiceCustomErrorMessage body = AccountServiceCustomErrorMessage.builder()
+                    .timestamp(LocalDateTime.now().toString())
+                    .status(HttpStatus.BAD_REQUEST.value())
+                    .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                    .message(e.getBindingResult().getAllErrors().get(0).getDefaultMessage())
+                    .path(request.getRequestURI())
+                    .build();
+            return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+        }
+
+        @ExceptionHandler({
+                PasswordUpdateException.class,
+                PaymentSavingException.class,
+                PaymentNotFoundException.class,
+                ConstraintViolationException.class})
+        public ResponseEntity<AccountServiceCustomErrorMessage> handleChangeException(Exception exception,
+                                                                                      HttpServletRequest request){
+            AccountServiceCustomErrorMessage body = AccountServiceCustomErrorMessage.builder()
+                    .timestamp(LocalDateTime.now().toString())
+                    .status(HttpStatus.BAD_REQUEST.value())
+                    .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                    .message(exception.getMessage())
+                    .path(request.getRequestURI())
+                    .build();
+            return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+        }
+    }
+  learner_created: true
+- name: src/account/domain/PaymentResponse.java
+  visible: true
+  text: |
+    package account.domain;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class PaymentResponse {
+
+        private static final String DEFAULT_STATUS = "Added successfully!";
+
+        private String status;
+
+        {
+            this.status = DEFAULT_STATUS;
+        }
+    }
+  learner_created: true
+- name: src/account/util/exception/PaymentNotFoundException.java
+  visible: true
+  text: |
+    package account.util.exception;
+
+    public class PaymentNotFoundException extends Exception {
+
+        public PaymentNotFoundException(String message) {
+            super(message);
+        }
+    }
+  learner_created: true
+- name: src/account/util/PaymentUtil.java
+  visible: true
+  text: |
+    package account.util;
+
+    import java.time.Month;
+    import java.time.format.TextStyle;
+    import java.util.Locale;
+    import java.util.function.Predicate;
+
+    public class PaymentUtil {
+
+        private static final int CENT = 100;
+
+        public static String getFullSalary(Long salary) {
+            return String.format("%s dollar(s) %s cent(s)", salary/ CENT,salary % CENT);
+        }
+
+        public static String convertMonthFromPeriodToString(String period) {
+            String[] periodArr = period.split("-");
+            int month = Integer.parseInt(periodArr[0]);
+
+            return String.format("%s-%s", Month.of(month).getDisplayName(TextStyle.FULL_STANDALONE ,
+                    Locale.US), periodArr[1]);
+        }
+
+        public static Predicate<String> isPeriodValid() {
+            return period -> {
+                if (!period.matches("\\d{2}-\\d{4}")) {
+                    return false;
+                }
+                final int i = Integer.parseInt(period.split("-")[0]);
+                return i >= 0 && i <= 12;
+            };
+        }
+    }
+  learner_created: true
+- name: src/account/domain/PaymentDto.java
+  visible: true
+  text: |
+    package account.domain;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Builder;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class PaymentDto {
+
+        private String name;
+        private String lastname;
+        private String period;
+        private String salary;
+    }
+  learner_created: true
+- name: src/account/util/config/UserDetailsImpl.java
+  visible: true
+  text: |
+    package account.util.config;
+
+    import account.model.User;
+    import org.springframework.security.core.GrantedAuthority;
+    import org.springframework.security.core.authority.SimpleGrantedAuthority;
+    import org.springframework.security.core.userdetails.UserDetails;
+
+    import java.util.Collection;
+    import java.util.List;
+
+    public class UserDetailsImpl implements UserDetails {
+
+        private final String email;
+        private final String password;
+        private final List<GrantedAuthority> rolesAndAuthorities;
+
+        public UserDetailsImpl(User user) {
+            this.email = user.getEmail();
+            this.password = user.getPassword();
+            this.rolesAndAuthorities = List.of(new SimpleGrantedAuthority(user.getRole()));
+        }
+
+        @Override
+        public Collection<? extends GrantedAuthority> getAuthorities() {
+            return rolesAndAuthorities;
+        }
+
+        @Override
+        public String getPassword() {
+            return password;
+        }
+
+        @Override
+        public String getUsername() {
+            return email;
+        }
+
+        @Override
+        public boolean isAccountNonExpired() {
+            return true;
+        }
+
+        @Override
+        public boolean isAccountNonLocked() {
+            return true;
+        }
+
+        @Override
+        public boolean isCredentialsNonExpired() {
+            return true;
+        }
+
+        @Override
+        public boolean isEnabled() {
+            return true;
+        }
+    }
+  learner_created: true
+- name: src/account/service/IPaymentService.java
+  visible: true
+  text: |
+    package account.service;
+
+    import account.domain.PaymentDto;
+    import account.domain.PaymentResponse;
+    import account.model.PaymentRequest;
+    import account.util.exception.PasswordUpdateException;
+    import account.util.exception.PaymentNotFoundException;
+    import account.util.exception.PaymentSavingException;
+
+    import java.util.List;
+
+    public interface IPaymentService {
+
+        List<PaymentDto> findAllByEmail(String email);
+        List<PaymentDto> findByEmailAndPeriod(String email, String period) throws PaymentNotFoundException;
+        PaymentResponse save(List<PaymentRequest> payments) throws PasswordUpdateException, PaymentSavingException;
+        PaymentResponse save(PaymentRequest payment) throws PasswordUpdateException, PaymentSavingException;
+    }
+  learner_created: true
+- name: src/account/util/exception/PasswordUpdateException.java
+  visible: true
+  text: |
+    package account.util.exception;
+
+    public class PasswordUpdateException extends Exception {
+
+        public PasswordUpdateException(String message) {
+            super(message);
+        }
+    }
+  learner_created: true
+- name: src/account/domain/AccountServiceCustomErrorMessage.java
+  visible: true
+  text: |
+    package account.domain;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Builder;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class AccountServiceCustomErrorMessage {
+
+        public static String DEFAULT_MESSAGE = "User exist!";
+
+        private String timestamp;
+        private int status;
+        private String error;
+        private String message;
+        private String path;
+
+        {
+            this.message = DEFAULT_MESSAGE;
+        }
+    }
+  learner_created: true
+- name: src/account/service/UserService.java
+  visible: true
+  text: |
+    package account.service;
+
+    import account.model.User;
+    import account.repository.UserRepository;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+
+    import java.util.Optional;
+
+    @Service
+    public class UserService implements  IUserService {
+
+        private final UserRepository userRepository;
+
+        @Autowired
+        public UserService(UserRepository userRepository) {
+            this.userRepository = userRepository;
+        }
+
+        @Override
+        public User save(User user) {
+            return userRepository.save(user);
+        }
+
+        @Override
+        public Optional<User> findByEmail(String email) {
+            return userRepository.findByEmailIgnoreCase(email);
+        }
+    }
+  learner_created: true
+- name: src/account/model/Role.java
+  visible: true
+  learner_created: true
+- name: src/account/repository/UserRepository.java
+  visible: true
+  text: |
+    package account.repository;
+
+    import account.model.User;
+    import org.springframework.data.repository.CrudRepository;
+
+    import java.util.Optional;
+
+    public interface UserRepository extends CrudRepository<User, Long> {
+
+        Optional<User> findByEmailIgnoreCase(String email);
+
+    }
+  learner_created: true
+- name: src/account/domain/UserDto.java
+  visible: true
+  text: |
+    package account.domain;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Builder;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class UserDto {
+
+        private Long id;
+        private String name;
+        private String lastname;
+        private String email;
+    }
+  learner_created: true
+- name: src/account/service/IUserService.java
+  visible: true
+  text: |
+    package account.service;
+
+    import account.model.User;
+
+    import java.util.Optional;
+
+    public interface IUserService {
+
+        User save(User user);
+
+        Optional<User> findByEmail(String email);
+    }
+  learner_created: true
+- name: src/account/mapper/UserMapper.java
+  visible: true
+  text: |
+    package account.mapper;
+
+    import account.domain.UserDto;
+    import account.model.User;
+    import org.springframework.stereotype.Component;
+
+    @Component
+    public class UserMapper {
+
+        public UserDto toDto(User user) {
+            return UserDto.builder()
+                    .id(user.getId())
+                    .name(user.getName())
+                    .lastname(user.getLastname())
+                    .email(user.getEmail())
+                    .build();
+        }
+    }
+  learner_created: true
+- name: src/account/util/config/RestAuthenticationEntryPoint.java
+  visible: true
+  text: |
+    package account.util.config;
+
+    import org.springframework.security.core.AuthenticationException;
+    import org.springframework.security.web.AuthenticationEntryPoint;
+    import org.springframework.stereotype.Component;
+
+    import javax.servlet.http.HttpServletRequest;
+    import javax.servlet.http.HttpServletResponse;
+    import java.io.IOException;
+
+    @Component
+    public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
+
+        @Override
+        public void commence(HttpServletRequest request,
+                             HttpServletResponse response,
+                             AuthenticationException authException) throws IOException {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, authException.getMessage());
+        }
+    }
+  learner_created: true
+- name: src/account/controller/PaymentController.java
+  visible: true
+  text: |
+    package account.controller;
+
+    import account.domain.PaymentDto;
+    import account.domain.PaymentResponse;
+    import account.model.PaymentRequest;
+    import account.service.PaymentService;
+    import account.util.PaymentUtil;
+    import account.util.exception.PaymentNotFoundException;
+    import account.util.exception.PaymentSavingException;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.http.MediaType;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.security.core.annotation.AuthenticationPrincipal;
+    import org.springframework.security.core.userdetails.UserDetails;
+    import org.springframework.validation.annotation.Validated;
+    import org.springframework.web.bind.annotation.*;
+
+    import javax.validation.Valid;
+    import java.util.List;
+
+    @RestController
+    @RequestMapping(path = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Validated
+    public class PaymentController {
+
+        private final PaymentService paymentService;
+
+        @Autowired
+        public PaymentController(PaymentService paymentService) {
+            this.paymentService = paymentService;
+        }
+
+        @PostMapping(path = "/acct/payments", consumes = MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<PaymentResponse> update(@Valid @RequestBody List<PaymentRequest> payrolls) throws PaymentSavingException {
+
+            for (int i = 1; i < payrolls.size(); i++) {
+                if (payrolls.get(i - 1).getPeriod().equals(payrolls.get(i).getPeriod())) {
+                    throw new PaymentSavingException("Duplicated entry in payment list");
+                }
+            }
+
+            return ResponseEntity.ok(paymentService.save(payrolls));
+        }
+
+        @PutMapping("/acct/payments")
+        public ResponseEntity<PaymentResponse> update(@Valid @RequestBody PaymentRequest request) throws PaymentSavingException {
+            return ResponseEntity.ok(this.paymentService.save(request));
+        }
+
+        @GetMapping(path = "/empl/payment")
+        public ResponseEntity<List<PaymentDto>> getPayroll(@AuthenticationPrincipal UserDetails userDetails,
+                                                           @RequestParam(required = false) String period) throws PaymentNotFoundException, PaymentSavingException {
+
+            if (period == null) {
+                return ResponseEntity.ok(paymentService.findAllByEmail(userDetails.getUsername()));
+            } else if (PaymentUtil.isPeriodValid().test(period)) {
+                return ResponseEntity.ok(paymentService.findByEmailAndPeriod(userDetails.getUsername(), period));
+            } else {
+                throw new PaymentSavingException("Wrong date in request!");
+            }
+        }
+    }
+  learner_created: true
+- name: src/account/controller/UserController.java
+  visible: true
+  text: |
+    package account.controller;
+
+    import account.domain.PasswordChangeResponse;
+    import account.util.exception.AccountServiceException;
+    import account.util.exception.PasswordUpdateException;
+    import account.domain.UserDto;
+    import account.mapper.UserMapper;
+    import account.model.PasswordChangeRequest;
+    import account.model.User;
+    import account.service.UserService;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.MediaType;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.security.core.annotation.AuthenticationPrincipal;
+    import org.springframework.security.core.userdetails.UserDetails;
+    import org.springframework.security.crypto.password.PasswordEncoder;
+    import org.springframework.validation.annotation.Validated;
+    import org.springframework.web.bind.annotation.*;
+
+    import javax.validation.Valid;
+
+    @RestController
+    @RequestMapping(path = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Validated
+    public class UserController {
+
+        private final UserService userService;
+        private final UserMapper mapper;
+        private final PasswordEncoder encoder;
+
+        @Autowired
+        public UserController(UserService userService, UserMapper mapper, PasswordEncoder encoder) {
+            this.userService = userService;
+            this.mapper = mapper;
+            this.encoder = encoder;
+        }
+
+        @PostMapping(path = "/auth/signup", consumes = MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<UserDto> signup(@Valid @RequestBody User user) throws AccountServiceException {
+
+            if (userService.findByEmail(user.getEmail()).isPresent()) {
+                throw new AccountServiceException(HttpStatus.BAD_REQUEST.getReasonPhrase());
+            }
+
+            user.setPassword(encoder.encode(user.getPassword()));
+            user.setRole("ROLE_USER");
+            return ResponseEntity.ok(mapper.toDto(userService.save(user)));
+        }
+
+        @PostMapping(path = "/auth/changepass", consumes = MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<PasswordChangeResponse> changePassword(@Valid @RequestBody PasswordChangeRequest request,
+                                                                     @AuthenticationPrincipal UserDetails userDetails) throws PasswordUpdateException {
+
+            if (encoder.matches(request.getPassword(), userDetails.getPassword())) {
+                throw new PasswordUpdateException("The passwords must be different!");
+            }
+
+            var currentUser = userService.findByEmail(userDetails.getUsername()).orElseThrow();
+            currentUser.setPassword(encoder.encode(request.getPassword()));
+            currentUser = userService.save(currentUser);
+            return ResponseEntity.ok(PasswordChangeResponse.builder()
+                    .email(currentUser.getEmail().toLowerCase()).status(PasswordChangeResponse.DEFAULT_STATUS)
+                    .build());
+        }
+    }
+  learner_created: true
+- name: src/account/model/PasswordChangeRequest.java
+  visible: true
+  text: |
+    package account.model;
+
+    import account.util.Blacklist;
+    import com.fasterxml.jackson.annotation.JsonProperty;
+    import lombok.AllArgsConstructor;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    import javax.validation.constraints.AssertFalse;
+    import javax.validation.constraints.AssertTrue;
+    import javax.validation.constraints.NotNull;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class PasswordChangeRequest {
+
+        @JsonProperty("new_password")
+        @NotNull
+        private String password;
+
+        @AssertFalse(message = "The password is in the hacker's database!")
+        public boolean isBreached() {
+            return this.password != null && Blacklist.contains(this.password);
+        }
+
+        @AssertTrue(message = "Password length must be 12 chars minimum!")
+        public boolean hasValideLength() {
+            return this.password != null && this.password.length() >= 12;
+        }
+    }
+  learner_created: true
+- name: src/account/domain/UserDeletionResponse.java
+  visible: true
+  learner_created: true
+- name: src/account/util/exception/UserNotFoundException.java
+  visible: true
+  learner_created: true
+- name: src/account/util/exception/AdminDeletionException.java
+  visible: true
+  learner_created: true
+- name: src/account/model/RoleUpdateRequest.java
+  visible: true
+  learner_created: true
+- name: src/account/model/Group.java
+  visible: true
+  learner_created: true
+- name: src/account/repository/GroupRepository.java
+  visible: true
+  learner_created: true
+- name: src/account/service/IGroupService.java
+  visible: true
+  learner_created: true
+- name: src/account/service/GroupService.java
+  visible: true
+  learner_created: true
+- name: src/account/mapper/DataLoader.java
+  visible: true
+  learner_created: true
+- name: src/account/util/exception/RoleUpdateException.java
+  visible: true
+  learner_created: true
+- name: src/account/util/exception/InvalidRoleException.java
+  visible: true
+  learner_created: true
+- name: src/account/util/config/CustomAccessDeniedHandler.java
+  visible: true
+  learner_created: true
 feedback_link: https://hyperskill.org/learn/step/16605#comment
-status: Unchecked
+status: Solved
+feedback:
+  message: Congratulations!
+  time: Mon, 17 Oct 2022 19:52:36 UTC
 record: -1

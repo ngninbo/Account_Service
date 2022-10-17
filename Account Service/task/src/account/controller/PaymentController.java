@@ -1,6 +1,5 @@
 package account.controller;
 
-import account.domain.PaymentDto;
 import account.domain.PaymentResponse;
 import account.model.PaymentRequest;
 import account.service.PaymentService;
@@ -32,13 +31,6 @@ public class PaymentController {
 
     @PostMapping(path = "/acct/payments", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<PaymentResponse> update(@Valid @RequestBody List<PaymentRequest> payrolls) throws PaymentSavingException {
-
-        for (int i = 1; i < payrolls.size(); i++) {
-            if (payrolls.get(i - 1).getPeriod().equals(payrolls.get(i).getPeriod())) {
-                throw new PaymentSavingException("Duplicated entry in payment list");
-            }
-        }
-
         return ResponseEntity.ok(paymentService.save(payrolls));
     }
 
@@ -48,8 +40,8 @@ public class PaymentController {
     }
 
     @GetMapping(path = "/empl/payment")
-    public ResponseEntity<List<PaymentDto>> getPayroll(@AuthenticationPrincipal UserDetails userDetails,
-                                                       @RequestParam(required = false) String period) throws PaymentNotFoundException, PaymentSavingException {
+    public ResponseEntity<?> getPayroll(@AuthenticationPrincipal UserDetails userDetails,
+                                        @RequestParam(required = false) String period) throws PaymentNotFoundException, PaymentSavingException {
 
         if (period == null) {
             return ResponseEntity.ok(paymentService.findAllByEmail(userDetails.getUsername()));

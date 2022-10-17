@@ -3,6 +3,7 @@ package account.util.exception;
 import account.domain.AccountServiceCustomErrorMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -40,11 +41,8 @@ public class AccountServiceExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler({
-            PasswordUpdateException.class,
-            PaymentSavingException.class,
-            PaymentNotFoundException.class,
-            ConstraintViolationException.class})
+    @ExceptionHandler({PasswordUpdateException.class, PaymentSavingException.class, PaymentNotFoundException.class,
+            ConstraintViolationException.class, AdminDeletionException.class, RoleUpdateException.class})
     public ResponseEntity<AccountServiceCustomErrorMessage> handleChangeException(Exception exception,
                                                                                   HttpServletRequest request){
         AccountServiceCustomErrorMessage body = AccountServiceCustomErrorMessage.builder()
@@ -55,5 +53,29 @@ public class AccountServiceExceptionHandler {
                 .path(request.getRequestURI())
                 .build();
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler({UserNotFoundException.class, InvalidRoleException.class})
+    public ResponseEntity<AccountServiceCustomErrorMessage> handleNotFound(Exception exception, HttpServletRequest request) {
+        AccountServiceCustomErrorMessage body = AccountServiceCustomErrorMessage.builder()
+                .timestamp(LocalDateTime.now().toString())
+                .status(HttpStatus.NOT_FOUND.value())
+                .error(HttpStatus.NOT_FOUND.getReasonPhrase())
+                .message(exception.getMessage())
+                .path(request.getRequestURI())
+                .build();
+        return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler({AccessDeniedException.class})
+    public ResponseEntity<AccountServiceCustomErrorMessage> handleAccessDenied(HttpServletRequest request) {
+        AccountServiceCustomErrorMessage body = AccountServiceCustomErrorMessage.builder()
+                .timestamp(LocalDateTime.now().toString())
+                .status(HttpStatus.FORBIDDEN.value())
+                .error(HttpStatus.FORBIDDEN.getReasonPhrase())
+                .message("Access Denied!")
+                .path(request.getRequestURI())
+                .build();
+        return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
     }
 }

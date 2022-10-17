@@ -1,11 +1,9 @@
 package account.domain;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,5 +19,16 @@ public class AccountServiceCustomErrorMessage {
 
     {
         this.message = DEFAULT_MESSAGE;
+    }
+
+    @Override
+    public String toString() {
+        return "{" +
+                "timestamp:'" + timestamp + '\'' +
+                ", status:" + status +
+                ", error:'" + error + '\'' +
+                ", message:'" + message + '\'' +
+                ", path:'" + path + '\'' +
+                '}';
     }
 }
