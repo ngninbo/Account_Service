@@ -137,6 +137,2235 @@ files:
       };
     }
   learner_created: false
+- name: src/account/domain/payment/PaymentResponse.java
+  visible: true
+  text: |
+    package account.domain.payment;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class PaymentResponse {
+
+        private static final String DEFAULT_STATUS = "Added successfully!";
+
+        private String status;
+
+        {
+            this.status = DEFAULT_STATUS;
+        }
+    }
+  learner_created: true
+- name: src/account/config/UserDetailsImpl.java
+  visible: true
+  text: |
+    package account.config;
+
+    import account.model.user.Group;
+    import account.model.user.User;
+    import org.springframework.security.core.GrantedAuthority;
+    import org.springframework.security.core.authority.SimpleGrantedAuthority;
+    import org.springframework.security.core.userdetails.UserDetails;
+
+    import java.util.Collection;
+    import java.util.List;
+    import java.util.stream.Collectors;
+
+    public class UserDetailsImpl implements UserDetails {
+
+        private final String email;
+        private final String password;
+        private final boolean isAccountNonLocked;
+        private final List<GrantedAuthority> rolesAndAuthorities;
+
+        public UserDetailsImpl(User user) {
+            this.email = user.getEmail();
+            this.password = user.getPassword();
+            this.isAccountNonLocked = user.isAccountNonLocked();
+            this.rolesAndAuthorities = getRolesAndAuthorities(user);
+        }
+
+        @Override
+        public Collection<? extends GrantedAuthority> getAuthorities() {
+            return rolesAndAuthorities;
+        }
+
+        @Override
+        public String getPassword() {
+            return password;
+        }
+
+        @Override
+        public String getUsername() {
+            return email;
+        }
+
+        @Override
+        public boolean isAccountNonExpired() {
+            return true;
+        }
+
+        @Override
+        public boolean isAccountNonLocked() {
+            return isAccountNonLocked;
+        }
+
+        @Override
+        public boolean isCredentialsNonExpired() {
+            return true;
+        }
+
+        @Override
+        public boolean isEnabled() {
+            return true;
+        }
+
+        private List<GrantedAuthority> getRolesAndAuthorities(User user) {
+            return user.getGroups().stream()
+                    .map(Group::getRole)
+                    .map(role -> new SimpleGrantedAuthority(role.name()))
+                    .collect(Collectors.toList());
+        }
+    }
+  learner_created: true
+- name: src/account/model/payment/PaymentRequest.java
+  visible: true
+  text: |
+    package account.model.payment;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class PaymentRequest {
+
+        private String employee;
+        private String period;
+        private Long salary;
+    }
+  learner_created: true
+- name: src/account/exception/admin/AdminDeletionException.java
+  visible: true
+  text: |
+    package account.exception.admin;
+
+    public class AdminDeletionException extends Exception {
+
+        public AdminDeletionException(String message) {
+            super(message);
+        }
+    }
+  learner_created: true
+- name: src/account/model/user/PasswordChangeRequest.java
+  visible: true
+  text: |
+    package account.model.user;
+
+    import account.util.Blacklist;
+    import com.fasterxml.jackson.annotation.JsonProperty;
+    import lombok.AllArgsConstructor;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    import javax.validation.constraints.AssertFalse;
+    import javax.validation.constraints.AssertTrue;
+    import javax.validation.constraints.NotNull;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class PasswordChangeRequest {
+
+        @JsonProperty("new_password")
+        @NotNull
+        private String password;
+
+        @AssertFalse(message = "The password is in the hacker's database!")
+        public boolean isBreached() {
+            return this.password != null && Blacklist.contains(this.password);
+        }
+
+        @AssertTrue(message = "Password length must be 12 chars minimum!")
+        public boolean hasValideLength() {
+            return this.password != null && this.password.length() >= 12;
+        }
+    }
+  learner_created: true
+- name: src/account/exception/admin/UserNotFoundException.java
+  visible: true
+  text: |
+    package account.exception.admin;
+
+    public class UserNotFoundException extends Exception {
+
+        public UserNotFoundException(String message) {
+            super(message);
+        }
+    }
+  learner_created: true
+- name: src/account/config/RestAuthenticationEntryPoint.java
+  visible: true
+  text: |
+    package account.config;
+
+    import org.springframework.security.core.AuthenticationException;
+    import org.springframework.security.web.AuthenticationEntryPoint;
+    import org.springframework.stereotype.Component;
+
+    import javax.servlet.http.HttpServletRequest;
+    import javax.servlet.http.HttpServletResponse;
+    import java.io.IOException;
+
+    @Component
+    public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
+
+        @Override
+        public void commence(HttpServletRequest request,
+                             HttpServletResponse response,
+                             AuthenticationException authException) throws IOException {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, authException.getMessage());
+        }
+    }
+  learner_created: true
+- name: src/account/service/user/UserService.java
+  visible: true
+  text: |
+    package account.service.user;
+
+    import account.domain.user.UserAccessResponse;
+    import account.domain.user.UserDeletionResponse;
+    import account.domain.user.UserDto;
+    import account.mapper.UserMapper;
+    import account.model.user.*;
+    import account.repository.UserRepository;
+    import account.exception.admin.AdminDeletionException;
+    import account.exception.admin.InvalidRoleException;
+    import account.exception.admin.RoleUpdateException;
+    import account.exception.admin.UserNotFoundException;
+    import account.service.group.GroupService;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+
+    import javax.transaction.Transactional;
+    import java.util.Arrays;
+    import java.util.List;
+    import java.util.Optional;
+    import java.util.function.Predicate;
+
+    @Service
+    public class UserService implements IUserService {
+
+        public static final int MAX_FAILED_ATTEMPTS = 5;
+
+        private final UserRepository userRepository;
+        private final GroupService groupService;
+        private final UserMapper userMapper;
+
+        @Autowired
+        public UserService(UserRepository userRepository, GroupService groupService, UserMapper userMapper) {
+            this.userRepository = userRepository;
+            this.groupService = groupService;
+            this.userMapper = userMapper;
+        }
+
+        @Override
+        public User save(User user) {
+            return userRepository.save(user);
+        }
+
+        @Override
+        public Optional<User> findByEmail(String email) {
+            return userRepository.findByEmailIgnoreCase(email);
+        }
+
+        @Override
+        public List<User> findAll() {
+            return userRepository.findAllOrderById();
+        }
+
+        @Override
+        @Transactional
+        public UserDeletionResponse deleteUserByEmail(String email) throws UserNotFoundException, AdminDeletionException {
+
+            var user = userRepository.findByEmailIgnoreCase(email).orElseThrow(() -> new UserNotFoundException("User not found!"));
+            if (user.isAdmin()) {
+                throw new AdminDeletionException("Can't remove ADMINISTRATOR role!");
+            }
+            userRepository.delete(user);
+            return UserDeletionResponse.builder().user(email).status("Deleted successfully!").build();
+        }
+
+        @Override
+        @Transactional
+        public UserDto updateRole(RoleUpdateRequest request) throws UserNotFoundException, InvalidRoleException, RoleUpdateException, AdminDeletionException {
+            var user = userRepository.findByEmailIgnoreCase(request.getEmail()).orElseThrow(() -> new UserNotFoundException("User not found!"));
+
+            String roleFromRequest = String.format("ROLE_%s", request.getRole());
+
+            if (Arrays.stream(Role.values()).anyMatch(role -> role.name().equals(roleFromRequest))) {
+                Group group = groupService.findByRole(roleFromRequest).orElseThrow(() -> new InvalidRoleException("Role not found!"));
+
+                switch (request.getOperation()) {
+                    case "GRANT":
+                        return this.grant(user, group);
+                    case "REMOVE":
+                        return revoke(user, group);
+                    default:
+                        throw new RoleUpdateException("Unsupported operation!");
+                }
+            } else {
+                throw new InvalidRoleException("Role not found!");
+            }
+        }
+
+        @Override
+        public UserDto grant(User user, Group group) throws RoleUpdateException {
+            Role role = group.getRole();
+
+            if ((user.isAdmin() && isBusinessRole().test(role))) {
+                throw new RoleUpdateException("The user cannot combine administrative and business roles!");
+            }
+
+            if ((!user.isAdmin() && Role.ROLE_ADMINISTRATOR.equals(role))) {
+                throw new RoleUpdateException("The user cannot combine administrative and business roles!");
+            }
+
+            else {
+                user.getGroups().add(group);
+                user = this.userRepository.save(user);
+                return userMapper.toDto(user);
+            }
+        }
+
+        @Override
+        public UserDto revoke(User user, Group group) throws RoleUpdateException, AdminDeletionException {
+            Role role = group.getRole();
+
+            if (user.isAdmin() && Role.ROLE_ADMINISTRATOR.equals(role)) {
+                throw new AdminDeletionException("Can't remove ADMINISTRATOR role!");
+            }
+
+            if (!user.hasRole(role)) {
+                throw new RoleUpdateException("The user does not have a role!");
+            }
+
+            if (user.getGroups().size() == 1 && user.hasRole(role)) {
+                throw new RoleUpdateException("The user must have at least one role!");
+            }
+
+            user.getGroups().remove(group);
+            return userMapper.toDto(userRepository.save(user));
+        }
+
+
+        @Override
+        @Transactional
+        public User increaseFailedAttempts(User user) {
+            int newFailAttempts = user.getFailedAttempt() + 1;
+            user.setFailedAttempt(newFailAttempts);
+            return userRepository.save(user);
+        }
+
+        @Override
+        @Transactional
+        public void resetFailedAttempts(String email) {
+            userRepository.updateFailedAttempts(0, email);
+        }
+
+        @Transactional
+        @Override
+        public void lock(User user) {
+            user.setAccountNonLocked(false);
+            userRepository.save(user);
+        }
+
+        @Override
+        @Transactional
+        public UserAccessResponse updateAccess(UserAccessUpdateRequest request) throws UserNotFoundException, AdminDeletionException, RoleUpdateException {
+            var user = userRepository.findByEmailIgnoreCase(request.getEmail()).orElseThrow(() -> new UserNotFoundException("User not found!"));
+            if (user.isAdmin()) {
+                throw new AdminDeletionException("Can't lock the ADMINISTRATOR!");
+            }
+
+            switch (request.getOperation()) {
+                case "LOCK":
+                    lock(user);
+                    return new UserAccessResponse(String.format("User %s locked!", user.getEmail()));
+                case "UNLOCK":
+                    user.setFailedAttempt(0);
+                    user.setAccountNonLocked(true);
+                    userRepository.save(user);
+                    return new UserAccessResponse(String.format("User %s unlocked!", user.getEmail()));
+                default:
+                    throw new RoleUpdateException("Unsupported operation!");
+            }
+        }
+
+        private Predicate<Role> isBusinessRole() {
+            return role -> Role.ROLE_USER.equals(role) || Role.ROLE_ACCOUNTANT.equals(role) || Role.ROLE_AUDITOR.equals(role);
+        }
+    }
+  learner_created: true
+- name: src/account/domain/user/UserDto.java
+  visible: true
+  text: |
+    package account.domain.user;
+
+    import account.model.user.Role;
+    import lombok.AllArgsConstructor;
+    import lombok.Builder;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    import java.util.List;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class UserDto {
+
+        private Long id;
+        private String name;
+        private String lastname;
+        private String email;
+        private List<Role> roles;
+    }
+  learner_created: true
+- name: src/account/util/Blacklist.java
+  visible: true
+  text: |
+    package account.util;
+
+    import java.util.Set;
+
+    public class Blacklist {
+
+        public static final Set<String> passwords = Set.of("PasswordForJanuary", "PasswordForFebruary", "PasswordForMarch", "PasswordForApril",
+                "PasswordForMay", "PasswordForJune", "PasswordForJuly", "PasswordForAugust",
+                "PasswordForSeptember", "PasswordForOctober", "PasswordForNovember", "PasswordForDecember");
+
+        public static boolean contains(String password) {
+            return passwords.contains(password);
+        }
+    }
+  learner_created: true
+- name: src/account/model/event/EventBuilder.java
+  visible: true
+  text: |
+    package account.model.event;
+
+    import account.util.LogEvent;
+
+    public class EventBuilder {
+
+        private LogEvent action;
+        private String subject;
+        private String object;
+        private String path;
+
+        private EventBuilder() {
+        }
+
+        public static EventBuilder init() {
+            return new EventBuilder();
+        }
+
+        public EventBuilder withAction(LogEvent action) {
+            this.action = action;
+            return this;
+        }
+
+        public EventBuilder withSubject(String subject) {
+            this.subject = subject;
+            return this;
+        }
+
+        public EventBuilder withObject(String object) {
+            this.object = object;
+            return this;
+        }
+
+        public EventBuilder withPath(String path) {
+            this.path = path;
+            return this;
+        }
+
+        public Event build() {
+            return new Event(action, subject, object, path);
+        }
+    }
+  learner_created: true
+- name: src/account/exception/payment/PaymentSavingException.java
+  visible: true
+  text: |
+    package account.exception.payment;
+
+    public class PaymentSavingException extends Exception {
+
+        public PaymentSavingException(String message) {
+            super(message);
+        }
+    }
+  learner_created: true
+- name: src/account/handler/AccountServiceExceptionHandler.java
+  visible: true
+  text: |
+    package account.handler;
+
+    import account.domain.AccountServiceCustomErrorMessage;
+    import account.exception.*;
+    import account.exception.admin.AdminDeletionException;
+    import account.exception.admin.InvalidRoleException;
+    import account.exception.admin.RoleUpdateException;
+    import account.exception.admin.UserNotFoundException;
+    import account.exception.payment.PasswordUpdateException;
+    import account.exception.payment.PaymentNotFoundException;
+    import account.exception.payment.PaymentSavingException;
+    import account.util.exception.AccountStatusUpdateException;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.security.access.AccessDeniedException;
+    import org.springframework.security.authentication.LockedException;
+    import org.springframework.web.bind.MethodArgumentNotValidException;
+    import org.springframework.web.bind.annotation.ControllerAdvice;
+    import org.springframework.web.bind.annotation.ExceptionHandler;
+
+    import javax.servlet.http.HttpServletRequest;
+    import javax.validation.ConstraintViolationException;
+    import java.time.LocalDateTime;
+
+    @ControllerAdvice
+    public class AccountServiceExceptionHandler {
+
+        @ExceptionHandler({AccountServiceException.class})
+        public ResponseEntity<AccountServiceCustomErrorMessage> handleBadRequest(Exception e, HttpServletRequest request) {
+            AccountServiceCustomErrorMessage body = AccountServiceCustomErrorMessage.builder()
+                    .timestamp(LocalDateTime.now().toString())
+                    .status(HttpStatus.BAD_REQUEST.value())
+                    .error(e.getMessage())
+                    .message(AccountServiceCustomErrorMessage.DEFAULT_MESSAGE)
+                    .path(request.getRequestURI())
+                    .build();
+
+            return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+        }
+
+        @ExceptionHandler({MethodArgumentNotValidException.class})
+        public ResponseEntity<AccountServiceCustomErrorMessage> handleValidationError(MethodArgumentNotValidException e,
+                                                                                      HttpServletRequest request) {
+            AccountServiceCustomErrorMessage body = AccountServiceCustomErrorMessage.builder()
+                    .timestamp(LocalDateTime.now().toString())
+                    .status(HttpStatus.BAD_REQUEST.value())
+                    .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                    .message(e.getBindingResult().getAllErrors().get(0).getDefaultMessage())
+                    .path(request.getRequestURI())
+                    .build();
+            return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+        }
+
+        @ExceptionHandler({PasswordUpdateException.class, PaymentSavingException.class, PaymentNotFoundException.class,
+                ConstraintViolationException.class, AdminDeletionException.class, RoleUpdateException.class, AccountStatusUpdateException.class, LockedException.class})
+        public ResponseEntity<AccountServiceCustomErrorMessage> handleChangeException(Exception exception,
+                                                                                      HttpServletRequest request){
+            AccountServiceCustomErrorMessage body = AccountServiceCustomErrorMessage.builder()
+                    .timestamp(LocalDateTime.now().toString())
+                    .status(HttpStatus.BAD_REQUEST.value())
+                    .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                    .message(exception.getMessage())
+                    .path(request.getRequestURI())
+                    .build();
+            return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+        }
+
+        @ExceptionHandler({UserNotFoundException.class, InvalidRoleException.class})
+        public ResponseEntity<AccountServiceCustomErrorMessage> handleNotFound(Exception exception, HttpServletRequest request) {
+            AccountServiceCustomErrorMessage body = AccountServiceCustomErrorMessage.builder()
+                    .timestamp(LocalDateTime.now().toString())
+                    .status(HttpStatus.NOT_FOUND.value())
+                    .error(HttpStatus.NOT_FOUND.getReasonPhrase())
+                    .message(exception.getMessage())
+                    .path(request.getRequestURI())
+                    .build();
+            return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+        }
+
+        @ExceptionHandler({AccessDeniedException.class})
+        public ResponseEntity<AccountServiceCustomErrorMessage> handleAccessDenied(HttpServletRequest request) {
+            AccountServiceCustomErrorMessage body = AccountServiceCustomErrorMessage.builder()
+                    .timestamp(LocalDateTime.now().toString())
+                    .status(HttpStatus.FORBIDDEN.value())
+                    .error(HttpStatus.FORBIDDEN.getReasonPhrase())
+                    .message("Access Denied!")
+                    .path(request.getRequestURI())
+                    .build();
+            return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
+        }
+    }
+  learner_created: true
+- name: src/account/service/user/IUserService.java
+  visible: true
+  text: |
+    package account.service.user;
+
+    import account.domain.user.PasswordChangeResponse;
+    import account.domain.user.UserAccessResponse;
+    import account.domain.user.UserDeletionResponse;
+    import account.domain.user.UserDto;
+    import account.exception.AccountServiceException;
+    import account.exception.payment.PasswordUpdateException;
+    import account.model.user.*;
+    import account.exception.admin.AdminDeletionException;
+    import account.exception.admin.InvalidRoleException;
+    import account.exception.admin.RoleUpdateException;
+    import account.exception.admin.UserNotFoundException;
+
+    import javax.transaction.Transactional;
+    import java.util.List;
+    import java.util.Optional;
+
+    public interface IUserService {
+
+        User save(User user);
+
+        Optional<User> findByEmail(String email);
+
+        List<User> findAll();
+
+        UserDeletionResponse deleteUserByEmail(String email) throws UserNotFoundException, AdminDeletionException;
+
+        UserDto updateRole(RoleUpdateRequest request) throws UserNotFoundException, InvalidRoleException, RoleUpdateException, AdminDeletionException;
+
+        UserDto grant(User user, Group group) throws RoleUpdateException;
+
+        UserDto revoke(User user, Group group) throws RoleUpdateException, AdminDeletionException;
+
+        User increaseFailedAttempts(User user);
+
+        @Transactional
+        void resetFailedAttempts(String email);
+
+        @Transactional
+        void lock(User user);
+
+        UserAccessResponse updateAccess(UserAccessUpdateRequest updateRequest) throws UserNotFoundException, AdminDeletionException, RoleUpdateException;
+    }
+  learner_created: true
+- name: src/account/domain/user/UserAccessResponse.java
+  visible: true
+  text: |
+    package account.domain.user;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class UserAccessResponse {
+
+        private String status;
+
+    }
+  learner_created: true
+- name: src/account/service/user/UserDetailsServiceImpl.java
+  visible: true
+  text: |
+    package account.service.user;
+
+    import account.config.UserDetailsImpl;
+    import account.model.user.User;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.security.core.userdetails.UserDetails;
+    import org.springframework.security.core.userdetails.UserDetailsService;
+    import org.springframework.security.core.userdetails.UsernameNotFoundException;
+    import org.springframework.stereotype.Service;
+
+    import java.util.Optional;
+
+    @Service
+    public class UserDetailsServiceImpl implements UserDetailsService {
+
+        private final UserService userService;
+
+        public UserDetailsServiceImpl(@Autowired UserService userService) {
+            this.userService = userService;
+        }
+
+        @Override
+        public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+            Optional<User> user = userService.findByEmail(email);
+            if (user.isPresent()) {
+                return new UserDetailsImpl(user.get());
+            } else {
+                throw new UsernameNotFoundException("Not found " + email);
+            }
+        }
+    }
+  learner_created: true
+- name: src/account/model/user/User.java
+  visible: true
+  text: |
+    package account.model.user;
+
+    import account.util.Blacklist;
+    import lombok.*;
+    import org.hibernate.Hibernate;
+
+    import javax.persistence.*;
+    import javax.validation.constraints.*;
+    import java.util.LinkedHashSet;
+    import java.util.Objects;
+    import java.util.Set;
+    import java.util.stream.Collectors;
+
+    @Entity
+    @Getter
+    @Setter
+    @ToString
+    @RequiredArgsConstructor
+    @AllArgsConstructor
+    @SequenceGenerator(name = "sequence", sequenceName = "UserSeq")
+    @Table(name = "users")
+    public class User {
+
+        @Id
+        @GeneratedValue(strategy = GenerationType.AUTO, generator = "sequence")
+        @Column(name = "user_id")
+        private Long id;
+
+        @NotEmpty(message = "The user name must not be empty")
+        private String name;
+
+        @NotEmpty(message = "last name must not be empty")
+        private String lastname;
+
+        @NotEmpty(message = "Email must not be empty")
+        @Pattern(regexp = ".*@acme\\.com", message = "Email from given domain not allowed")
+        private String email;
+
+        @NotNull
+        private String password;
+
+        @ManyToMany(fetch = FetchType.EAGER)
+        private Set<Group> groups = new LinkedHashSet<>();
+
+        private boolean enabled = true;
+
+        @Column(name = "account_non_locked")
+        private boolean accountNonLocked = true;
+
+        @Column(name = "failed_attempt")
+        private int failedAttempt;
+
+        @AssertFalse(message = "The password is in the hacker's database!")
+        public boolean isBreached() {
+            return this.password != null && Blacklist.contains(this.password);
+        }
+
+        @AssertTrue(message = "The password length must be at least 12 chars!")
+        public boolean hasValideLength() {
+            return this.password != null && this.password.length() >= 12;
+        }
+
+        public boolean isAdmin() {
+            return this.groups.stream().map(Group::getRole).collect(Collectors.toList()).contains(Role.ROLE_ADMINISTRATOR);
+        }
+
+        public boolean hasRole(Role role) {
+            return groups.stream().map(Group::getRole).anyMatch(r -> r.equals(role));
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+            User user = (User) o;
+            return id != null && Objects.equals(id, user.id);
+        }
+
+        @Override
+        public int hashCode() {
+            return getClass().hashCode();
+        }
+    }
+  learner_created: true
+- name: src/account/domain/user/PasswordChangeResponse.java
+  visible: true
+  text: |
+    package account.domain.user;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Builder;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    @Data
+    @NoArgsConstructor
+    @Builder
+    @AllArgsConstructor
+    public class PasswordChangeResponse {
+
+        public static final String DEFAULT_STATUS = "The password has been updated successfully";
+
+        private String email;
+        private String status;
+    }
+  learner_created: true
+- name: src/account/controller/PaymentController.java
+  visible: true
+  text: |
+    package account.controller;
+
+    import account.domain.payment.PaymentResponse;
+    import account.model.payment.PaymentRequest;
+    import account.service.payment.PaymentService;
+    import account.util.PaymentUtil;
+    import account.exception.payment.PaymentNotFoundException;
+    import account.exception.payment.PaymentSavingException;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.http.MediaType;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.security.core.annotation.AuthenticationPrincipal;
+    import org.springframework.security.core.userdetails.UserDetails;
+    import org.springframework.validation.annotation.Validated;
+    import org.springframework.web.bind.annotation.*;
+
+    import javax.validation.Valid;
+    import java.util.List;
+
+    @RestController
+    @RequestMapping(path = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Validated
+    public class PaymentController {
+
+        private final PaymentService paymentService;
+
+        @Autowired
+        public PaymentController(PaymentService paymentService) {
+            this.paymentService = paymentService;
+        }
+
+        @PostMapping(path = "/acct/payments", consumes = MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<PaymentResponse> update(@Valid @RequestBody List<PaymentRequest> payrolls) throws PaymentSavingException {
+            return ResponseEntity.ok(paymentService.save(payrolls));
+        }
+
+        @PutMapping("/acct/payments")
+        public ResponseEntity<PaymentResponse> update(@Valid @RequestBody PaymentRequest request) throws PaymentSavingException {
+            return ResponseEntity.ok(this.paymentService.save(request));
+        }
+
+        @GetMapping(path = "/empl/payment")
+        public ResponseEntity<?> getPayroll(@AuthenticationPrincipal UserDetails userDetails,
+                                            @RequestParam(required = false) String period) throws PaymentNotFoundException, PaymentSavingException {
+
+            if (period == null) {
+                return ResponseEntity.ok(paymentService.findAllByEmail(userDetails.getUsername()));
+            } else if (PaymentUtil.isPeriodValid().test(period)) {
+                return ResponseEntity.ok(paymentService.findByEmailAndPeriod(userDetails.getUsername(), period));
+            } else {
+                throw new PaymentSavingException("Wrong date in request!");
+            }
+        }
+    }
+  learner_created: true
+- name: src/account/mapper/DataLoader.java
+  visible: true
+  text: |
+    package account.mapper;
+
+    import account.model.user.Group;
+    import account.model.user.Role;
+    import account.service.group.GroupService;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.context.ApplicationListener;
+    import org.springframework.context.event.ContextRefreshedEvent;
+    import org.springframework.stereotype.Component;
+
+    @Component
+    public class DataLoader implements ApplicationListener<ContextRefreshedEvent> {
+
+        private final GroupService groupService;
+
+        @Autowired
+        public DataLoader(GroupService groupService) {
+            this.groupService = groupService;
+        }
+
+
+        @Override
+        public void onApplicationEvent(ContextRefreshedEvent event) {
+            createRoles();
+        }
+
+        private void createRoles() {
+            try {
+                groupService.save(new Group(Role.ROLE_ADMINISTRATOR));
+                groupService.save(new Group(Role.ROLE_ACCOUNTANT));
+                groupService.save(new Group(Role.ROLE_USER));
+                groupService.save(new Group(Role.ROLE_AUDITOR));
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+  learner_created: true
+- name: src/account/service/payment/IPaymentService.java
+  visible: true
+  text: |
+    package account.service.payment;
+
+    import account.domain.payment.PaymentDto;
+    import account.domain.payment.PaymentResponse;
+    import account.model.payment.PaymentRequest;
+    import account.exception.payment.PasswordUpdateException;
+    import account.exception.payment.PaymentNotFoundException;
+    import account.exception.payment.PaymentSavingException;
+
+    import java.util.List;
+
+    public interface IPaymentService {
+
+        List<PaymentDto> findAllByEmail(String email);
+        PaymentDto findByEmailAndPeriod(String email, String period) throws PaymentNotFoundException;
+        PaymentResponse save(List<PaymentRequest> payments) throws PasswordUpdateException, PaymentSavingException;
+        PaymentResponse save(PaymentRequest payment) throws PasswordUpdateException, PaymentSavingException;
+    }
+  learner_created: true
+- name: src/account/service/LoginAttemptService.java
+  visible: true
+  text: |
+    package account.service;
+
+    import account.service.user.UserService;
+    import org.springframework.stereotype.Service;
+
+    @Service
+    public class LoginAttemptService {
+
+        private final int MAX_ATTEMPT = 5;
+        private UserService userService;
+
+
+    }
+  learner_created: true
+- name: src/account/mapper/UserMapper.java
+  visible: true
+  text: |
+    package account.mapper;
+
+    import account.domain.user.UserDto;
+    import account.model.user.Group;
+    import account.model.user.Role;
+    import account.model.user.User;
+    import org.springframework.stereotype.Component;
+
+    import java.util.Comparator;
+    import java.util.List;
+    import java.util.stream.Collectors;
+
+    @Component
+    public class UserMapper {
+
+        public UserDto toDto(User user) {
+            List<Role> roles = user.getGroups()
+                    .stream()
+                    .map(Group::getRole)
+                    //.sorted(Comparator.comparing(role -> role.name().replace("ROLE_", "").length()))
+                    .sorted(Comparator.comparingInt(Enum::ordinal))
+                    .collect(Collectors.toList());
+
+            return UserDto.builder()
+                    .id(user.getId())
+                    .name(user.getName())
+                    .lastname(user.getLastname())
+                    .email(user.getEmail())
+                    .roles(roles)
+                    .build();
+        }
+
+        public List<UserDto> toList(List<User> users) {
+            return users.isEmpty() ? List.of() : users.stream().map(this::toDto).collect(Collectors.toList());
+        }
+    }
+  learner_created: true
+- name: src/account/exception/AccountServiceException.java
+  visible: true
+  text: |
+    package account.exception;
+
+    public class AccountServiceException extends Exception {
+
+        public AccountServiceException(String message) {
+            super(message);
+        }
+    }
+  learner_created: true
+- name: src/account/domain/AccountServiceCustomErrorMessage.java
+  visible: true
+  text: |
+    package account.domain;
+
+    import lombok.*;
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class AccountServiceCustomErrorMessage {
+
+        public static String DEFAULT_MESSAGE = "User exist!";
+
+        private String timestamp;
+        private int status;
+        private String error;
+        private String message;
+        private String path;
+
+        {
+            this.message = DEFAULT_MESSAGE;
+        }
+
+        @Override
+        public String toString() {
+            return "{" +
+                    "timestamp:'" + timestamp + '\'' +
+                    ", status:" + status +
+                    ", error:'" + error + '\'' +
+                    ", message:'" + message + '\'' +
+                    ", path:'" + path + '\'' +
+                    '}';
+        }
+    }
+  learner_created: true
+- name: src/account/domain/user/UserDeletionResponse.java
+  visible: true
+  text: |
+    package account.domain.user;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Builder;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    @Data
+    @NoArgsConstructor
+    @Builder
+    @AllArgsConstructor
+    public class UserDeletionResponse {
+
+        private String user;
+        private String status;
+    }
+  learner_created: true
+- name: src/account/domain/payment/PaymentDto.java
+  visible: true
+  text: |
+    package account.domain.payment;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Builder;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class PaymentDto {
+
+        private String name;
+        private String lastname;
+        private String period;
+        private String salary;
+    }
+  learner_created: true
+- name: src/account/config/SecurityConfig.java
+  visible: true
+  text: |
+    package account.config;
+
+    import account.handler.AccountServiceAccessDeniedHandler;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.context.annotation.Bean;
+    import org.springframework.context.annotation.Configuration;
+    import org.springframework.http.HttpMethod;
+    import org.springframework.security.authentication.AuthenticationManager;
+    import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+    import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+    import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+    import org.springframework.security.config.http.SessionCreationPolicy;
+    import org.springframework.security.core.userdetails.UserDetailsService;
+    import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+    import org.springframework.security.crypto.password.PasswordEncoder;
+
+    @Configuration
+    public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+        private static final int ENCODER_STRENGTH = 13;
+        private final UserDetailsService userDetailsService;
+        private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+
+        private final AccountServiceAccessDeniedHandler accessDeniedHandler;
+
+        @Autowired
+        public SecurityConfig(UserDetailsService userDetailsService, RestAuthenticationEntryPoint entryPoint,
+                              AccountServiceAccessDeniedHandler accessDeniedHandler) {
+            this.userDetailsService = userDetailsService;
+            this.restAuthenticationEntryPoint = entryPoint;
+            this.accessDeniedHandler = accessDeniedHandler;
+        }
+
+        @Override
+        protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+            auth
+                    .userDetailsService(userDetailsService)
+                    .passwordEncoder(getEncoder());
+        }
+
+        @Override
+        protected void configure(HttpSecurity http) throws Exception {
+            http
+                    .exceptionHandling().accessDeniedHandler(accessDeniedHandler).and()
+                    .httpBasic()
+                    .authenticationEntryPoint(restAuthenticationEntryPoint) // Handle auth error
+                    .and()
+                    .csrf().disable().headers().frameOptions().disable() // for Postman, the H2 console
+                    .and()
+                    .authorizeRequests() // manage access
+                    .mvcMatchers("/api/admin/**").hasRole("ADMINISTRATOR")
+                    .mvcMatchers("/api/acct/**").hasRole("ACCOUNTANT")
+                    .mvcMatchers(HttpMethod.POST, "/api/auth/changepass").hasAnyRole("USER", "ACCOUNTANT", "ADMINISTRATOR")
+                    .mvcMatchers(HttpMethod.GET, "/api/empl/payment", "/api/empl/payment/*").hasAnyRole("USER", "ACCOUNTANT")
+                    .mvcMatchers(HttpMethod.GET, "/api/security/events").hasRole("AUDITOR")
+                    .antMatchers(HttpMethod.POST, "/api/signup").permitAll()
+                    // other matchers
+                    .and()
+                    .sessionManagement()
+                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS); // no session
+        }
+
+        @Bean
+        public PasswordEncoder getEncoder() {
+            return new BCryptPasswordEncoder(ENCODER_STRENGTH);
+        }
+    }
+  learner_created: true
+- name: src/account/service/event/EventService.java
+  visible: true
+  text: |
+    package account.service.event;
+
+    import account.model.event.Event;
+    import account.repository.EventRepository;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+
+    import java.util.List;
+
+    @Service
+    public class EventService implements IEventService {
+
+        private final EventRepository eventRepository;
+
+        @Autowired
+        public EventService(EventRepository eventRepository) {
+            this.eventRepository = eventRepository;
+        }
+
+        @Override
+        public List<Event> findAll() {
+            return this.eventRepository.findAll();
+        }
+
+        @Override
+        public void save(Event event) {
+            this.eventRepository.save(event);
+        }
+    }
+  learner_created: true
+- name: src/account/exception/admin/RoleUpdateException.java
+  visible: true
+  text: |
+    package account.exception.admin;
+
+    public class RoleUpdateException extends Exception {
+        public RoleUpdateException(String message) {
+            super(message);
+        }
+    }
+  learner_created: true
+- name: src/account/config/AuthenticationFailureEventListener.java
+  visible: true
+  text: |
+    package account.config;
+
+    import account.model.event.EventBuilder;
+    import account.model.user.User;
+    import account.service.event.EventService;
+    import account.service.user.UserService;
+    import account.util.LogEvent;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.context.ApplicationListener;
+    import org.springframework.security.authentication.event.AuthenticationFailureBadCredentialsEvent;
+    import org.springframework.stereotype.Component;
+
+    import javax.servlet.http.HttpServletRequest;
+
+    @Component
+    public class AuthenticationFailureEventListener implements ApplicationListener<AuthenticationFailureBadCredentialsEvent> {
+
+        private final HttpServletRequest request;
+        private final UserService userService;
+        private final EventService eventService;
+
+        @Autowired
+        public AuthenticationFailureEventListener(HttpServletRequest request, UserService userService, EventService eventService) {
+            this.request = request;
+            this.userService = userService;
+            this.eventService = eventService;
+        }
+
+        @Override
+        public void onApplicationEvent(AuthenticationFailureBadCredentialsEvent event) {
+
+            String username = (String) event.getAuthentication().getPrincipal();
+            var user = userService.findByEmail(username);
+            if (user.isPresent()) {
+                User currentUser = user.get();
+
+                if (currentUser.isAdmin()) {
+                    return;
+                }
+
+                EventBuilder eb = EventBuilder.init()
+                        .withAction(LogEvent.LOGIN_FAILED)
+                        .withSubject(username.toLowerCase())
+                        .withObject(request.getRequestURI())
+                        .withPath(request.getRequestURI());
+
+                if (currentUser.isEnabled() && currentUser.isAccountNonLocked()) {
+                    currentUser = userService.increaseFailedAttempts(currentUser);
+                    eventService.save(eb.build());
+                }
+
+                if (currentUser.getFailedAttempt() >= UserService.MAX_FAILED_ATTEMPTS) {
+                    eb.withAction(LogEvent.BRUTE_FORCE);
+                    eventService.save(eb.build());
+
+                    userService.lock(currentUser);
+                    eb.withAction(LogEvent.LOCK_USER);
+                    eb.withObject(String.format("Lock user %s", username.toLowerCase()));
+                    eventService.save(eb.build());
+                }
+            } else {
+                EventBuilder eb = EventBuilder.init()
+                        .withAction(LogEvent.LOGIN_FAILED)
+                        .withSubject(username.toLowerCase())
+                        .withObject(request.getRequestURI())
+                        .withPath(request.getRequestURI());
+                eventService.save(eb.build());
+            }
+        }
+    }
+  learner_created: true
+- name: src/account/model/user/Role.java
+  visible: true
+  text: |
+    package account.model.user;
+
+    public enum Role {
+
+        ROLE_ACCOUNTANT,
+        ROLE_ADMINISTRATOR,
+        ROLE_AUDITOR,
+        ROLE_USER,
+    }
+  learner_created: true
+- name: src/account/controller/EventController.java
+  visible: true
+  text: |
+    package account.controller;
+
+    import account.domain.EventDto;
+    import account.mapper.EventMapper;
+    import account.service.event.EventService;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.http.MediaType;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.validation.annotation.Validated;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RestController;
+
+    import java.util.List;
+
+    @RestController
+    @RequestMapping(path = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Validated
+    public class EventController {
+
+        private final EventService eventService;
+        private final EventMapper mapper;
+
+        @Autowired
+        public EventController(EventService eventService, EventMapper mapper) {
+            this.eventService = eventService;
+            this.mapper = mapper;
+        }
+
+        @GetMapping("/security/events")
+        public ResponseEntity<List<EventDto>> getEvents() {
+            return ResponseEntity.ok(mapper.toList(eventService.findAll()));
+        }
+    }
+  learner_created: true
+- name: src/account/model/user/Group.java
+  visible: true
+  text: |
+    package account.model.user;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    import javax.persistence.*;
+
+    @Entity
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Table(name = "user_groups")
+    public class Group {
+
+        @Id
+        @GeneratedValue(strategy = GenerationType.AUTO)
+        @Column(name = "group_id")
+        private Long id;
+
+        @Enumerated(EnumType.STRING)
+        @Column(unique = true, updatable = false)
+        private Role role;
+
+        public Group(Role role) {
+            this.role = role;
+        }
+    }
+  learner_created: true
+- name: src/account/handler/AccountServiceAccessDeniedHandler.java
+  visible: true
+  text: |
+    package account.handler;
+
+    import account.model.event.Event;
+    import account.service.event.EventService;
+    import account.util.LogEvent;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.security.access.AccessDeniedException;
+    import org.springframework.security.core.Authentication;
+    import org.springframework.security.core.context.SecurityContextHolder;
+    import org.springframework.security.core.userdetails.UserDetails;
+    import org.springframework.security.web.access.AccessDeniedHandler;
+    import org.springframework.stereotype.Component;
+
+    import javax.servlet.http.HttpServletRequest;
+    import javax.servlet.http.HttpServletResponse;
+    import java.io.IOException;
+
+    @Component
+    public class AccountServiceAccessDeniedHandler implements AccessDeniedHandler {
+        private final EventService eventService;
+
+
+        @Autowired
+        public AccountServiceAccessDeniedHandler(EventService eventService) {
+            this.eventService = eventService;
+        }
+
+        @Override
+        public void handle(HttpServletRequest request, HttpServletResponse response,
+                           AccessDeniedException accessDeniedException) throws IOException {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null) {
+                var userDetails = (UserDetails) auth.getPrincipal();
+                var event = new Event(LogEvent.ACCESS_DENIED, userDetails.getUsername(), request.getRequestURI(), request.getRequestURI());
+                eventService.save(event);
+                response.sendError(HttpStatus.FORBIDDEN.value(), "Access Denied!");
+            }
+        }
+    }
+  learner_created: true
+- name: src/account/repository/PaymentRepository.java
+  visible: true
+  text: |
+    package account.repository;
+
+    import account.model.payment.Payment;
+    import org.springframework.data.repository.CrudRepository;
+
+    import java.util.List;
+    import java.util.Optional;
+
+    public interface PaymentRepository extends CrudRepository<Payment, Long> {
+
+        List<Payment> findAllByEmployee_EmailIgnoreCaseOrderByPeriodDesc(String email);
+
+        Optional<Payment> findByEmployee_EmailIgnoreCaseAndPeriod(String employee, String period);
+    }
+  learner_created: true
+- name: src/account/service/group/IGroupService.java
+  visible: true
+  text: |
+    package account.service.group;
+
+    import account.model.user.Group;
+
+    import java.util.Optional;
+
+    public interface IGroupService {
+
+        Optional<Group> findByRole(String role);
+        Group save(Group group);
+    }
+  learner_created: true
+- name: src/account/service/payment/PaymentService.java
+  visible: true
+  text: |
+    package account.service.payment;
+
+    import account.domain.payment.PaymentDto;
+    import account.domain.payment.PaymentResponse;
+    import account.mapper.PaymentMapper;
+    import account.model.payment.Payment;
+    import account.model.payment.PaymentRequest;
+    import account.repository.PaymentRepository;
+    import account.exception.payment.PaymentNotFoundException;
+    import account.exception.payment.PaymentSavingException;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+
+    import javax.transaction.Transactional;
+    import java.util.List;
+    import java.util.Optional;
+
+    @Service
+    public class PaymentService implements IPaymentService {
+
+        private final PaymentRepository paymentRepository;
+        private final PaymentMapper paymentMapper;
+
+        @Autowired
+        public PaymentService(PaymentRepository paymentRepository, PaymentMapper paymentMapper) {
+            this.paymentRepository = paymentRepository;
+            this.paymentMapper = paymentMapper;
+        }
+
+        @Override
+        public List<PaymentDto> findAllByEmail(String email) {
+            final List<Payment> payments = this.paymentRepository.findAllByEmployee_EmailIgnoreCaseOrderByPeriodDesc(email);
+            return payments.isEmpty() ? List.of() : paymentMapper.mapToList(payments);
+        }
+
+        @Override
+        public PaymentDto findByEmailAndPeriod(String email, String period) throws PaymentNotFoundException {
+            Payment  payment = paymentRepository.findByEmployee_EmailIgnoreCaseAndPeriod(email, period).orElseThrow(() -> new PaymentNotFoundException("Payment not found for given period!"));
+            return paymentMapper.mapToDto(payment);
+        }
+
+        @Override
+        @Transactional
+        public PaymentResponse save(List<PaymentRequest> payments) throws PaymentSavingException {
+
+            for (int i = 1; i < payments.size(); i++) {
+                if (payments.get(i - 1).getPeriod().equals(payments.get(i).getPeriod())) {
+                    throw new PaymentSavingException("Duplicated entry in payment list");
+                }
+            }
+
+            for(PaymentRequest request: payments) {
+                Optional<Payment> payment = paymentRepository.findByEmployee_EmailIgnoreCaseAndPeriod(request.getEmployee(), request.getPeriod());
+                if (payment.isEmpty()) {
+                    validateRequest(request);
+                    paymentRepository.save(paymentMapper.mapToPayment(request));
+                } else {
+                    throw new PaymentSavingException("Period must be unique!");
+                }
+            }
+            return new PaymentResponse();
+        }
+
+        @Override
+        @Transactional
+        public PaymentResponse save(PaymentRequest request) throws PaymentSavingException {
+
+            validateRequest(request);
+
+            try {
+                var payment = paymentRepository.findByEmployee_EmailIgnoreCaseAndPeriod(
+                        request.getEmployee(), request.getPeriod());
+                if (payment.isEmpty()){
+                    paymentRepository.save(paymentMapper.mapToPayment(request));
+                } else {
+                    var tmp = payment.get();
+                    tmp.setSalary(request.getSalary());
+                    paymentRepository.save(tmp);
+                }
+
+                return new PaymentResponse("Updated successfully!");
+            } catch (Exception e) {
+                throw new PaymentSavingException(e.getMessage());
+            }
+        }
+
+        private boolean isValidPeriod(String period) {
+
+            if (period == null) {
+                return true;
+            }
+
+            int month = Integer.parseInt(period.split("-")[0]);
+            return month <= 0 || month >= 12;
+        }
+
+        private void validateRequest(PaymentRequest request) throws PaymentSavingException {
+            if (request.getSalary() < 0) {
+                throw new PaymentSavingException("Salary can not be negativ!");
+            }
+
+            if (isValidPeriod(request.getPeriod())) {
+                throw new PaymentSavingException("payment period is not valid!");
+            }
+        }
+    }
+  learner_created: true
+- name: src/account/repository/EventRepository.java
+  visible: true
+  text: |
+    package account.repository;
+
+    import account.model.event.Event;
+    import org.springframework.data.repository.CrudRepository;
+
+    import java.util.List;
+
+    public interface EventRepository extends CrudRepository<Event, Long> {
+
+        List<Event> findAll();
+    }
+  learner_created: true
+- name: src/account/mapper/PaymentMapper.java
+  visible: true
+  text: |
+    package account.mapper;
+
+    import account.domain.payment.PaymentDto;
+    import account.model.payment.Payment;
+    import account.model.payment.PaymentRequest;
+    import account.model.user.User;
+    import account.service.user.UserService;
+    import account.util.PaymentUtil;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Component;
+
+    import java.util.List;
+    import java.util.NoSuchElementException;
+    import java.util.Optional;
+    import java.util.stream.Collectors;
+
+    @Component
+    public class PaymentMapper {
+
+        private final UserService userService;
+
+        @Autowired
+        public PaymentMapper(UserService userService) {
+            this.userService = userService;
+        }
+
+        public Payment mapToPayment(PaymentRequest request) throws NoSuchElementException {
+
+
+            final Optional<User> employee = userService.findByEmail(request.getEmployee());
+            return Payment.builder()
+                    .employee(employee.orElseThrow())
+                    .period(request.getPeriod())
+                    .salary(request.getSalary())
+                    .build();
+        }
+
+        public PaymentDto mapToDto(Payment payment) {
+            return PaymentDto.builder().name(payment.getEmployee().getName())
+                    .lastname(payment.getEmployee().getLastname())
+                    .period(PaymentUtil.convertMonthFromPeriodToString(payment.getPeriod()))
+                    .salary(PaymentUtil.getFullSalary(payment.getSalary()))
+                    .build();
+        }
+
+        public List<PaymentDto> mapToList(List<Payment> payments) {
+            return payments.stream().map(this::mapToDto).collect(Collectors.toList());
+        }
+    }
+  learner_created: true
+- name: src/account/model/event/Event.java
+  visible: true
+  text: |
+    package account.model.event;
+
+    import account.util.LogEvent;
+    import lombok.*;
+
+    import javax.persistence.*;
+    import java.time.LocalDateTime;
+
+    @Getter
+    @Setter
+    @ToString
+    @RequiredArgsConstructor
+    @AllArgsConstructor
+    @Entity
+    @SequenceGenerator(name = "event_sequence", sequenceName = "EventSeq")
+    @Table(name = "log_events")
+    public class Event {
+
+        @Id
+        @GeneratedValue(strategy = GenerationType.AUTO, generator = "event_sequence")
+        private Long id;
+        private String date;
+        @Enumerated(EnumType.STRING)
+        private LogEvent action;
+        private String subject;
+        private String object;
+        private String path;
+
+        public Event(LogEvent action, String subject, String object, String path) {
+            this.date = LocalDateTime.now().toString();
+            this.action = action;
+            this.subject = subject;
+            this.object = object;
+            this.path = path;
+        }
+    }
+  learner_created: true
+- name: src/account/domain/EventDto.java
+  visible: true
+  text: |
+    package account.domain;
+
+    import account.util.LogEvent;
+    import lombok.AllArgsConstructor;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class EventDto {
+
+        private LogEvent action;
+        private String subject;
+        private String object;
+        private String path;
+    }
+  learner_created: true
+- name: src/account/mapper/EventMapper.java
+  visible: true
+  text: |
+    package account.mapper;
+
+    import account.domain.EventDto;
+    import account.model.event.Event;
+    import org.springframework.stereotype.Component;
+
+    import java.util.List;
+    import java.util.stream.Collectors;
+
+    @Component
+    public class EventMapper {
+
+        public EventDto toDto(Event event) {
+            return new EventDto(event.getAction(), event.getSubject(), event.getObject(), event.getPath());
+        }
+
+        public List<EventDto> toList(List<Event> events) {
+            return events.isEmpty() ? List.of() : events.stream().map(this::toDto).collect(Collectors.toList());
+        }
+    }
+  learner_created: true
+- name: src/account/model/user/UserAccessUpdateRequest.java
+  visible: true
+  text: |
+    package account.model.user;
+
+    import com.fasterxml.jackson.annotation.JsonProperty;
+    import lombok.AllArgsConstructor;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    import javax.validation.constraints.NotEmpty;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class UserAccessUpdateRequest {
+
+        @NotEmpty
+        @JsonProperty("user")
+        private String email;
+        private String operation;
+    }
+  learner_created: true
+- name: src/account/util/exception/AccountStatusUpdateException.java
+  visible: true
+  text: |
+    package account.util.exception;
+
+    public class AccountStatusUpdateException extends Exception {
+
+        public AccountStatusUpdateException(String message) {
+            super(message);
+        }
+    }
+  learner_created: true
+- name: src/account/repository/UserRepository.java
+  visible: true
+  text: |
+    package account.repository;
+
+    import account.model.user.User;
+    import org.springframework.data.jpa.repository.Modifying;
+    import org.springframework.data.jpa.repository.Query;
+    import org.springframework.data.repository.CrudRepository;
+
+    import java.util.List;
+    import java.util.Optional;
+
+    public interface UserRepository extends CrudRepository<User, Long> {
+
+        Optional<User> findByEmailIgnoreCase(String email);
+
+        @Query(value = "SELECT * FROM USERS r ORDER BY r.user_id ASC", nativeQuery = true)
+        List<User> findAllOrderById();
+
+        @Query("UPDATE User u SET u.failedAttempt = ?1 WHERE u.email = ?2")
+        @Modifying
+        void updateFailedAttempts(int failAttempts, String email);
+
+    }
+  learner_created: true
+- name: src/account/service/group/GroupService.java
+  visible: true
+  text: |
+    package account.service.group;
+
+    import account.model.user.Group;
+    import account.model.user.Role;
+    import account.repository.GroupRepository;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+
+    import javax.transaction.Transactional;
+    import java.util.Optional;
+
+    @Service
+    public class GroupService implements IGroupService {
+
+        private final GroupRepository repository;
+
+        @Autowired
+        public GroupService(GroupRepository repository) {
+            this.repository = repository;
+        }
+
+        @Override
+        public Optional<Group> findByRole(String role) {
+            return this.repository.findByRole(Role.valueOf(role));
+        }
+
+        @Override
+        @Transactional
+        public Group save(Group group) {
+            var tmp = this.repository.findByRole(group.getRole());
+            if (tmp.isPresent()) {
+                group.setId(tmp.get().getId());
+                return this.repository.save(group);
+            }
+            return repository.save(group);
+        }
+    }
+  learner_created: true
+- name: src/account/exception/payment/PasswordUpdateException.java
+  visible: true
+  text: |
+    package account.exception.payment;
+
+    public class PasswordUpdateException extends Exception {
+
+        public PasswordUpdateException(String message) {
+            super(message);
+        }
+    }
+  learner_created: true
+- name: src/account/exception/admin/InvalidRoleException.java
+  visible: true
+  text: |
+    package account.exception.admin;
+
+    public class InvalidRoleException extends Exception {
+
+        public InvalidRoleException(String message) {
+            super(message);
+        }
+    }
+  learner_created: true
+- name: src/account/util/PaymentUtil.java
+  visible: true
+  text: |
+    package account.util;
+
+    import java.time.Month;
+    import java.time.format.TextStyle;
+    import java.util.Locale;
+    import java.util.function.Predicate;
+
+    public class PaymentUtil {
+
+        private static final int CENT = 100;
+
+        public static String getFullSalary(Long salary) {
+            return String.format("%s dollar(s) %s cent(s)", salary/ CENT,salary % CENT);
+        }
+
+        public static String convertMonthFromPeriodToString(String period) {
+            String[] periodArr = period.split("-");
+            int month = Integer.parseInt(periodArr[0]);
+
+            return String.format("%s-%s", Month.of(month).getDisplayName(TextStyle.FULL_STANDALONE ,
+                    Locale.US), periodArr[1]);
+        }
+
+        public static Predicate<String> isPeriodValid() {
+            return period -> {
+                if (!period.matches("\\d{2}-\\d{4}")) {
+                    return false;
+                }
+                final int i = Integer.parseInt(period.split("-")[0]);
+                return i >= 0 && i <= 12;
+            };
+        }
+    }
+  learner_created: true
+- name: src/account/controller/UserController.java
+  visible: true
+  text: |
+    package account.controller;
+
+    import account.domain.user.PasswordChangeResponse;
+    import account.domain.user.UserDeletionResponse;
+    import account.exception.admin.AdminDeletionException;
+    import account.exception.admin.InvalidRoleException;
+    import account.exception.admin.RoleUpdateException;
+    import account.exception.admin.UserNotFoundException;
+    import account.exception.payment.PasswordUpdateException;
+    import account.model.event.Event;
+    import account.model.user.*;
+    import account.exception.*;
+    import account.domain.user.UserDto;
+    import account.mapper.UserMapper;
+    import account.service.event.EventService;
+    import account.service.group.GroupService;
+    import account.service.user.UserService;
+    import account.util.LogEvent;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.MediaType;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.security.core.annotation.AuthenticationPrincipal;
+    import org.springframework.security.core.userdetails.UserDetails;
+    import org.springframework.security.crypto.password.PasswordEncoder;
+    import org.springframework.validation.annotation.Validated;
+    import org.springframework.web.bind.annotation.*;
+
+    import javax.servlet.http.HttpServletRequest;
+    import javax.validation.Valid;
+    import java.util.List;
+
+    @RestController
+    @RequestMapping(path = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Validated
+    public class UserController {
+
+        private final UserService userService;
+        private final UserMapper mapper;
+        private final GroupService groupService;
+        private final EventService eventService;
+        private final PasswordEncoder encoder;
+        private final HttpServletRequest httpServletRequest;
+
+        @Autowired
+        public UserController(UserService userService, UserMapper mapper, PasswordEncoder encoder, GroupService groupService, EventService eventService, HttpServletRequest httpServletRequest) {
+            this.userService = userService;
+            this.mapper = mapper;
+            this.encoder = encoder;
+            this.groupService = groupService;
+            this.eventService = eventService;
+            this.httpServletRequest = httpServletRequest;
+        }
+
+        @PostMapping(path = "/auth/signup", consumes = MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<UserDto> signup(@Valid @RequestBody User user, @AuthenticationPrincipal UserDetails userDetails) throws AccountServiceException {
+
+            if (userService.findByEmail(user.getEmail()).isPresent()) {
+                throw new AccountServiceException(HttpStatus.BAD_REQUEST.getReasonPhrase());
+            }
+
+            List<User> users = userService.findAll();
+            var group = groupService.findByRole(users.isEmpty() ? Role.ROLE_ADMINISTRATOR.name() : Role.ROLE_USER.name());
+
+            user.setEmail(user.getEmail().toLowerCase());
+            user.getGroups().add(group.orElseThrow());
+            user.setPassword(encoder.encode(user.getPassword()));
+            final User savedUser = userService.save(user);
+            var event = new Event(LogEvent.CREATE_USER, userDetails != null ? userDetails.getUsername() : "Anonymous",
+                    user.getEmail(), httpServletRequest.getRequestURI());
+            eventService.save(event);
+            return ResponseEntity.ok(mapper.toDto(savedUser));
+        }
+
+        @PostMapping(path = "/auth/changepass", consumes = MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<PasswordChangeResponse> changePassword(@Valid @RequestBody PasswordChangeRequest request,
+                                                                     @AuthenticationPrincipal UserDetails userDetails) throws PasswordUpdateException {
+
+            if (encoder.matches(request.getPassword(), userDetails.getPassword())) {
+                throw new PasswordUpdateException("The passwords must be different!");
+            }
+
+            final String username = userDetails.getUsername();
+            var currentUser = userService.findByEmail(username).orElseThrow();
+            currentUser.setPassword(encoder.encode(request.getPassword()));
+            currentUser = userService.save(currentUser);
+
+            var event = new Event(LogEvent.CHANGE_PASSWORD, username, username, httpServletRequest.getRequestURI());
+            eventService.save(event);
+            return ResponseEntity.ok(PasswordChangeResponse.builder()
+                    .email(currentUser.getEmail().toLowerCase()).status(PasswordChangeResponse.DEFAULT_STATUS)
+                    .build());
+        }
+    }
+  learner_created: true
+- name: src/account/repository/GroupRepository.java
+  visible: true
+  text: |
+    package account.repository;
+
+    import account.model.user.Group;
+    import account.model.user.Role;
+    import org.springframework.data.repository.CrudRepository;
+
+    import java.util.Optional;
+
+    public interface GroupRepository extends CrudRepository<Group, Long> {
+
+        Optional<Group> findByRole(Role role);
+    }
+  learner_created: true
+- name: src/account/controller/AdminController.java
+  visible: true
+  text: |
+    package account.controller;
+
+    import account.domain.user.UserAccessResponse;
+    import account.domain.user.UserDeletionResponse;
+    import account.domain.user.UserDto;
+    import account.exception.admin.AdminDeletionException;
+    import account.exception.admin.InvalidRoleException;
+    import account.exception.admin.RoleUpdateException;
+    import account.exception.admin.UserNotFoundException;
+    import account.mapper.UserMapper;
+    import account.model.event.Event;
+    import account.model.event.EventBuilder;
+    import account.model.user.RoleUpdateRequest;
+    import account.model.user.User;
+    import account.model.user.UserAccessUpdateRequest;
+    import account.service.event.EventService;
+    import account.service.user.UserService;
+    import account.util.LogEvent;
+    import org.springframework.http.MediaType;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.security.core.annotation.AuthenticationPrincipal;
+    import org.springframework.security.core.userdetails.UserDetails;
+    import org.springframework.validation.annotation.Validated;
+    import org.springframework.web.bind.annotation.*;
+
+    import javax.servlet.http.HttpServletRequest;
+    import javax.validation.Valid;
+    import java.nio.charset.StandardCharsets;
+    import java.util.List;
+
+    @RestController
+    @RequestMapping(path = "/api/admin", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Validated
+    public class AdminController {
+
+        private final UserService userService;
+        private final UserMapper mapper;
+        private final EventService eventService;
+        private final HttpServletRequest httpServletRequest;
+
+        public AdminController(UserService userService, UserMapper mapper, EventService eventService, HttpServletRequest httpServletRequest) {
+            this.userService = userService;
+            this.mapper = mapper;
+            this.httpServletRequest = httpServletRequest;
+            this.eventService = eventService;
+        }
+
+
+        @GetMapping(path = "/user")
+        public ResponseEntity<List<UserDto>> findAll() {
+            final List<User> users = userService.findAll();
+            return ResponseEntity.ok(users.isEmpty() ? List.of() : mapper.toList(users));
+        }
+
+        @DeleteMapping("/user/{email}")
+        public ResponseEntity<UserDeletionResponse> delete(@PathVariable String email,
+                                                           @AuthenticationPrincipal UserDetails userDetails)
+                throws UserNotFoundException, AdminDeletionException {
+
+            final User user = userService.findByEmail(userDetails.getUsername()).orElseThrow();
+            if (user.isAdmin() && email.equals(userDetails.getUsername())) {
+                throw new AdminDeletionException("Can't remove ADMINISTRATOR role!");
+            }
+            final UserDeletionResponse response = userService.deleteUserByEmail(email);
+
+            EventBuilder eb = EventBuilder.init()
+                    .withAction(LogEvent.DELETE_USER)
+                    .withSubject(userDetails.getUsername())
+                    .withObject(email)
+                    .withPath(httpServletRequest.getRequestURI());
+
+            eventService.save(eb.build());
+            return ResponseEntity.ok(response);
+        }
+
+        @PutMapping("/user/role")
+        public ResponseEntity<UserDto> updateRole(@Valid @RequestBody RoleUpdateRequest request, @AuthenticationPrincipal UserDetails userDetails) throws UserNotFoundException,
+                RoleUpdateException, AdminDeletionException, InvalidRoleException {
+            final UserDto userDto = userService.updateRole(request);
+            EventBuilder eb = EventBuilder.init()
+                    .withSubject(userDetails.getUsername())
+                    .withPath(httpServletRequest.getRequestURI());
+            if ("GRANT".equals(request.getOperation())) {
+                eb.withAction(LogEvent.GRANT_ROLE).withObject(String.format("Grant role %s to %s", request.getRole(), request.getEmail().toLowerCase()));
+            } else {
+                eb.withAction(LogEvent.REMOVE_ROLE).withObject(String.format("Remove role %s from %s", request.getRole(), request.getEmail().toLowerCase()));
+            }
+
+            eventService.save(eb.build());
+            return ResponseEntity.ok(userDto);
+        }
+
+        @PutMapping("/user/access")
+        public ResponseEntity<UserAccessResponse> updateAccess(@Valid @RequestBody UserAccessUpdateRequest updateRequest, @AuthenticationPrincipal UserDetails userDetails) throws UserNotFoundException, AdminDeletionException, RoleUpdateException {
+            var response = userService.updateAccess(updateRequest);
+            EventBuilder eb = EventBuilder.init()
+                    .withSubject(userDetails.getUsername())
+                    .withPath(httpServletRequest.getRequestURI());
+            if ("LOCK".equals(updateRequest.getOperation())) {
+                eb.withAction(LogEvent.LOCK_USER).withObject(String.format("Lock user %s", updateRequest.getEmail().toLowerCase()));
+            } else {
+                eb.withAction(LogEvent.UNLOCK_USER).withObject(String.format("Unlock user %s", updateRequest.getEmail().toLowerCase()));
+            }
+
+            eventService.save(eb.build());
+            return ResponseEntity.ok(response);
+        }
+    }
+  learner_created: true
+- name: src/account/service/event/IEventService.java
+  visible: true
+  text: |
+    package account.service.event;
+
+    import account.model.event.Event;
+
+    import java.util.List;
+
+    public interface IEventService {
+
+        List<Event> findAll();
+        void save(Event event);
+
+    }
+  learner_created: true
+- name: src/account/util/LogEvent.java
+  visible: true
+  text: |
+    package account.util;
+
+    public enum LogEvent {
+
+        CREATE_USER("A user has been successfully registered"),
+
+        CHANGE_PASSWORD("A user has changed the password successfully"),
+        ACCESS_DENIED("A user is trying to access a resource without access rights"),
+        LOGIN_FAILED("Failed authentication"),
+        GRANT_ROLE("A role is granted to a user"),
+        REMOVE_ROLE("A role has been revoked"),
+        LOCK_USER("The Administrator has locked the user"),
+        UNLOCK_USER("The Administrator has unlocked a user"),
+        DELETE_USER("The Administrator has deleted a user"),
+        BRUTE_FORCE("A user has been blocked on suspicion of a brute force attack");
+
+        public String description;
+
+        LogEvent(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
+  learner_created: true
+- name: src/account/model/payment/Payment.java
+  visible: true
+  text: |
+    package account.model.payment;
+
+    import account.model.user.User;
+    import lombok.AllArgsConstructor;
+    import lombok.Builder;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    import javax.persistence.*;
+    import javax.validation.constraints.*;
+
+    @Entity
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @SequenceGenerator(name = "sequencePayment", sequenceName = "PaymentSeq")
+    @Table(name = "emp_payments")
+    public class Payment {
+
+        @Id
+        @GeneratedValue(strategy = GenerationType.AUTO, generator = "sequencePayment")
+        private Long id;
+        @ManyToOne
+        @JoinColumn(name = "user_id")
+        @NotNull(message = "employee email must not be empty")
+        private User employee;
+        @Pattern(regexp = "\\d{2}-\\d{4}", message = "Period has invalid format")
+        private String period;
+        @NotNull(message = "salary is incorrect")
+        private Long salary;
+
+        @AssertTrue(message = "payment period is not valid")
+        public boolean isValidPeriod() {
+
+            if (this.period == null) {
+                return false;
+            }
+
+            int month = Integer.parseInt(period.split("-")[0]);
+            return month > 0 && month < 12;
+        }
+
+        @AssertFalse(message = "Salary can not be negativ")
+        public boolean validateSalary() {
+            return this.salary != null && this.salary < 0L;
+        }
+    }
+  learner_created: true
+- name: src/account/config/AuthenticationSuccessEventListener.java
+  visible: true
+  text: |
+    package account.config;
+
+    import account.model.user.User;
+    import account.service.user.UserService;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.context.ApplicationListener;
+    import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
+    import org.springframework.security.core.userdetails.UserDetails;
+    import org.springframework.stereotype.Component;
+
+    @Component
+    public class AuthenticationSuccessEventListener implements ApplicationListener<AuthenticationSuccessEvent> {
+
+        private final UserService userService;
+
+        @Autowired
+        public AuthenticationSuccessEventListener(UserService userService) {
+            this.userService = userService;
+        }
+
+        @Override
+        public void onApplicationEvent(AuthenticationSuccessEvent event) {
+            var userDetails = (UserDetails) event.getAuthentication().getPrincipal();
+
+            User user = userService.findByEmail(userDetails.getUsername()).orElseThrow();
+            if (user.getFailedAttempt() > 0) {
+                userService.resetFailedAttempts(user.getEmail());
+            }
+        }
+    }
+  learner_created: true
+- name: src/account/exception/payment/PaymentNotFoundException.java
+  visible: true
+  text: |
+    package account.exception.payment;
+
+    public class PaymentNotFoundException extends Exception {
+
+        public PaymentNotFoundException(String message) {
+            super(message);
+        }
+    }
+  learner_created: true
+- name: src/account/model/user/RoleUpdateRequest.java
+  visible: true
+  text: |
+    package account.model.user;
+
+    import com.fasterxml.jackson.annotation.JsonProperty;
+    import lombok.AllArgsConstructor;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    import javax.validation.constraints.NotEmpty;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class RoleUpdateRequest {
+
+        @NotEmpty
+        @JsonProperty("user")
+        private String email;
+        private String role;
+        private String operation;
+    }
+  learner_created: true
+- name: src/resources/keystore/service.p12
+  visible: true
+  learner_created: true
 feedback_link: https://hyperskill.org/learn/step/16607#comment
-status: Unchecked
+status: Solved
+feedback:
+  message: Well done! You've finished the project. Select a new project on <a href="https://hyperskill.org/projects">JetBrains
+    Academy</a> to continue learning.
+  time: Sat, 22 Oct 2022 21:15:12 UTC
 record: -1
