@@ -1,7 +1,7 @@
 package account.repository;
 
-import account.model.Group;
-import account.model.Role;
+import account.model.user.Group;
+import account.model.user.Role;
 import org.springframework.data.repository.CrudRepository;
 
 import java.util.Optional;

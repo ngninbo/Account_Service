@@ -1,6 +1,6 @@
 package account.repository;
 
-import account.model.Payment;
+import account.model.payment.Payment;
 import org.springframework.data.repository.CrudRepository;
 
 import java.util.List;

@@ -30,12 +30,17 @@
       <module name="Account_Service.Topics-Declaring_a_method-The_sign_of_a_number.main" target="11" />
       <module name="Account_Service.Topics-Declaring_a_method-Theory.main" target="11" />
       <module name="Account_Service.Topics-Declaring_a_method-Vowel_or_not.main" target="11" />
+      <module name="Account_Service.Topics-Generics_and_Object-Initialize_an_object_of_a_generic_class.main" target="11" />
+      <module name="Account_Service.Topics-Generics_and_Object-Theory.main" target="11" />
       <module name="Account_Service.Topics-Introduction_to_generic_programming-Correct_the_program.main" target="11" />
       <module name="Account_Service.Topics-Introduction_to_generic_programming-Pastry_packing_optimization.main" target="11" />
       <module name="Account_Service.Topics-Introduction_to_generic_programming-Theory.main" target="11" />
       <module name="Account_Service.Topics-NPE-Avoid_NPE_with_strings.main" target="11" />
       <module name="Account_Service.Topics-NPE-Return_empty_string_when_argument_is_null.main" target="11" />
       <module name="Account_Service.Topics-NPE-Theory.main" target="11" />
+      <module name="Account_Service.Topics-Singleton-Complete_a_class.main" target="11" />
+      <module name="Account_Service.Topics-Singleton-Complete_the_eager_singleton.main" target="11" />
+      <module name="Account_Service.Topics-Singleton-Theory.main" target="11" />
       <module name="Account_Service.Topics-String-Check_burgs.main" target="11" />
       <module name="Account_Service.Topics-String-Theory.main" target="11" />
       <module name="Account_Service.Topics-The_for-loop-Size_of_parts.main" target="11" />

@@ -1,10 +1,10 @@
 package account.mapper;
 
-import account.domain.PaymentDto;
-import account.model.Payment;
-import account.model.PaymentRequest;
-import account.model.User;
-import account.service.UserService;
+import account.domain.payment.PaymentDto;
+import account.model.payment.Payment;
+import account.model.payment.PaymentRequest;
+import account.model.user.User;
+import account.service.user.UserService;
 import account.util.PaymentUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;

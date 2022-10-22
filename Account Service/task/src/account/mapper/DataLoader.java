@@ -1,8 +1,8 @@
 package account.mapper;
 
-import account.model.Group;
-import account.model.Role;
-import account.service.GroupService;
+import account.model.user.Group;
+import account.model.user.Role;
+import account.service.group.GroupService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -29,6 +29,7 @@ public class DataLoader implements ApplicationListener<ContextRefreshedEvent> {
             groupService.save(new Group(Role.ROLE_ADMINISTRATOR));
             groupService.save(new Group(Role.ROLE_ACCOUNTANT));
             groupService.save(new Group(Role.ROLE_USER));
+            groupService.save(new Group(Role.ROLE_AUDITOR));
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }

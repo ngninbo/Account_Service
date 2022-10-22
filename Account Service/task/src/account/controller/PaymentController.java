@@ -1,11 +1,11 @@
 package account.controller;
 
-import account.domain.PaymentResponse;
-import account.model.PaymentRequest;
-import account.service.PaymentService;
+import account.domain.payment.PaymentResponse;
+import account.model.payment.PaymentRequest;
+import account.service.payment.PaymentService;
 import account.util.PaymentUtil;
-import account.util.exception.PaymentNotFoundException;
-import account.util.exception.PaymentSavingException;
+import account.exception.payment.PaymentNotFoundException;
+import account.exception.payment.PaymentSavingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;

@@ -1,11 +1,12 @@
 package account.mapper;
 
-import account.domain.UserDto;
-import account.model.Group;
-import account.model.Role;
-import account.model.User;
+import account.domain.user.UserDto;
+import account.model.user.Group;
+import account.model.user.Role;
+import account.model.user.User;
 import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -13,7 +14,12 @@ import java.util.stream.Collectors;
 public class UserMapper {
 
     public UserDto toDto(User user) {
-        List<Role> roles = user.getGroups().stream().map(Group::getRole).sorted().collect(Collectors.toList());
+        List<Role> roles = user.getGroups()
+                .stream()
+                .map(Group::getRole)
+                //.sorted(Comparator.comparing(role -> role.name().replace("ROLE_", "").length()))
+                .sorted(Comparator.comparingInt(Enum::ordinal))
+                .collect(Collectors.toList());
 
         return UserDto.builder()
                 .id(user.getId())
@@ -25,6 +31,6 @@ public class UserMapper {
     }
 
     public List<UserDto> toList(List<User> users) {
-        return users.stream().map(this::toDto).collect(Collectors.toList());
+        return users.isEmpty() ? List.of() : users.stream().map(this::toDto).collect(Collectors.toList());
     }
 }
