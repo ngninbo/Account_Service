@@ -14,7 +14,6 @@ import account.model.user.User;
 import account.model.user.UserAccessUpdateRequest;
 import account.service.event.EventService;
 import account.service.user.UserService;
-import account.util.LogEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +25,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import java.util.List;
+
+import static account.util.LogEvent.*;
 
 @RestController
 @RequestMapping(path = "/api/admin", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -64,7 +65,7 @@ public class AdminController {
         final UserDeletionResponse response = userService.deleteUserByEmail(email);
 
         EventBuilder eb = EventBuilder.init()
-                .withAction(LogEvent.DELETE_USER)
+                .withAction(DELETE_USER)
                 .withSubject(userDetails.getUsername())
                 .withObject(email)
                 .withPath(httpServletRequest.getRequestURI());
@@ -82,11 +83,11 @@ public class AdminController {
                 .withPath(httpServletRequest.getRequestURI());
         if ("GRANT".equals(request.getOperation())) {
             eb
-                    .withAction(LogEvent.GRANT_ROLE)
+                    .withAction(GRANT_ROLE)
                     .withObject(String.format("Grant role %s to %s", request.getRole(), request.getEmail().toLowerCase()));
         } else {
             eb
-                    .withAction(LogEvent.REMOVE_ROLE)
+                    .withAction(REMOVE_ROLE)
                     .withObject(String.format("Remove role %s from %s", request.getRole(), request.getEmail().toLowerCase()));
         }
 
@@ -102,11 +103,11 @@ public class AdminController {
                 .withPath(httpServletRequest.getRequestURI());
         if ("LOCK".equals(updateRequest.getOperation())) {
             eb
-                    .withAction(LogEvent.LOCK_USER)
+                    .withAction(LOCK_USER)
                     .withObject(String.format("Lock user %s", updateRequest.getEmail().toLowerCase()));
         } else {
             eb
-                    .withAction(LogEvent.UNLOCK_USER)
+                    .withAction(UNLOCK_USER)
                     .withObject(String.format("Unlock user %s", updateRequest.getEmail().toLowerCase()));
         }
 
