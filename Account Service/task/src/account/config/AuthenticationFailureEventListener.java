@@ -31,18 +31,21 @@ public class AuthenticationFailureEventListener implements ApplicationListener<A
 
         String username = (String) event.getAuthentication().getPrincipal();
         var user = userService.findByEmail(username);
-        if (user.isPresent()) {
+
+        EventBuilder eb = EventBuilder.init()
+                .withAction(LogEvent.LOGIN_FAILED)
+                .withSubject(username.toLowerCase())
+                .withObject(request.getRequestURI())
+                .withPath(request.getRequestURI());
+
+        if (user.isEmpty()) {
+            eventService.save(eb.build());
+        } else {
             User currentUser = user.get();
 
             if (currentUser.isAdmin()) {
                 return;
             }
-
-            EventBuilder eb = EventBuilder.init()
-                    .withAction(LogEvent.LOGIN_FAILED)
-                    .withSubject(username.toLowerCase())
-                    .withObject(request.getRequestURI())
-                    .withPath(request.getRequestURI());
 
             if (currentUser.isEnabled() && currentUser.isAccountNonLocked()) {
                 currentUser = userService.increaseFailedAttempts(currentUser);
@@ -58,13 +61,6 @@ public class AuthenticationFailureEventListener implements ApplicationListener<A
                 eb.withObject(String.format("Lock user %s", username.toLowerCase()));
                 eventService.save(eb.build());
             }
-        } else {
-            EventBuilder eb = EventBuilder.init()
-                    .withAction(LogEvent.LOGIN_FAILED)
-                    .withSubject(username.toLowerCase())
-                    .withObject(request.getRequestURI())
-                    .withPath(request.getRequestURI());
-            eventService.save(eb.build());
         }
     }
 }

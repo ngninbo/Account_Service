@@ -41,7 +41,8 @@ public class PaymentController {
 
     @GetMapping(path = "/empl/payment")
     public ResponseEntity<?> getPayroll(@AuthenticationPrincipal UserDetails userDetails,
-                                        @RequestParam(required = false) String period) throws PaymentNotFoundException, PaymentSavingException {
+                                        @RequestParam(required = false) String period)
+            throws PaymentNotFoundException, PaymentSavingException {
 
         if (period == null) {
             return ResponseEntity.ok(paymentService.findAllByEmail(userDetails.getUsername()));

@@ -1041,23 +1041,6 @@ files:
         PaymentResponse save(PaymentRequest payment) throws PasswordUpdateException, PaymentSavingException;
     }
   learner_created: true
-- name: src/account/service/LoginAttemptService.java
-  visible: true
-  text: |
-    package account.service;
-
-    import account.service.user.UserService;
-    import org.springframework.stereotype.Service;
-
-    @Service
-    public class LoginAttemptService {
-
-        private final int MAX_ATTEMPT = 5;
-        private UserService userService;
-
-
-    }
-  learner_created: true
 - name: src/account/mapper/UserMapper.java
   visible: true
   text: |
@@ -1825,18 +1808,6 @@ files:
         private String operation;
     }
   learner_created: true
-- name: src/account/util/exception/AccountStatusUpdateException.java
-  visible: true
-  text: |
-    package account.util.exception;
-
-    public class AccountStatusUpdateException extends Exception {
-
-        public AccountStatusUpdateException(String message) {
-            super(message);
-        }
-    }
-  learner_created: true
 - name: src/account/repository/UserRepository.java
   visible: true
   text: |
@@ -2361,6 +2332,21 @@ files:
   learner_created: true
 - name: src/resources/keystore/service.p12
   visible: true
+  learner_created: true
+- name: src/account/domain/user/PasswordChangeResponseBuilder.java
+  visible: true
+  learner_created: true
+- name: src/account/exception/AccountStatusUpdateException.java
+  visible: true
+  text: |
+    package account.util.exception;
+
+    public class AccountStatusUpdateException extends Exception {
+
+        public AccountStatusUpdateException(String message) {
+            super(message);
+        }
+    }
   learner_created: true
 feedback_link: https://hyperskill.org/learn/step/16607#comment
 status: Solved

@@ -9,7 +9,7 @@ import account.exception.admin.UserNotFoundException;
 import account.exception.payment.PasswordUpdateException;
 import account.exception.payment.PaymentNotFoundException;
 import account.exception.payment.PaymentSavingException;
-import account.util.exception.AccountStatusUpdateException;
+import account.exception.AccountStatusUpdateException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;

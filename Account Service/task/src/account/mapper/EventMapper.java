@@ -11,7 +11,12 @@ import java.util.stream.Collectors;
 public class EventMapper {
 
     public EventDto toDto(Event event) {
-        return new EventDto(event.getAction(), event.getSubject(), event.getObject(), event.getPath());
+        return EventDto.builder()
+                .action(event.getAction())
+                .subject(event.getSubject())
+                .object(event.getObject())
+                .path(event.getPath())
+                .build();
     }
 
     public List<EventDto> toList(List<Event> events) {

@@ -1,4 +1,4 @@
-package account.util.exception;
+package account.exception;
 
 public class AccountStatusUpdateException extends Exception {
 

@@ -1,5 +1,6 @@
 package account.model.payment;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,7 +10,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PaymentRequest {
 
-    private String employee;
+    @JsonProperty("employee")
+    private String email;
     private String period;
     private Long salary;
 }

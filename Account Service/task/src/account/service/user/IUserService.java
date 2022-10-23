@@ -1,11 +1,8 @@
 package account.service.user;
 
-import account.domain.user.PasswordChangeResponse;
 import account.domain.user.UserAccessResponse;
 import account.domain.user.UserDeletionResponse;
 import account.domain.user.UserDto;
-import account.exception.AccountServiceException;
-import account.exception.payment.PasswordUpdateException;
 import account.model.user.*;
 import account.exception.admin.AdminDeletionException;
 import account.exception.admin.InvalidRoleException;

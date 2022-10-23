@@ -14,7 +14,7 @@ public enum LogEvent {
     DELETE_USER("The Administrator has deleted a user"),
     BRUTE_FORCE("A user has been blocked on suspicion of a brute force attack");
 
-    public String description;
+    private final String description;
 
     LogEvent(String description) {
         this.description = description;

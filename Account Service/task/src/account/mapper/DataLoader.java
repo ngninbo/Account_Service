@@ -1,12 +1,13 @@
 package account.mapper;
 
 import account.model.user.Group;
-import account.model.user.Role;
 import account.service.group.GroupService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.stereotype.Component;
+
+import static account.model.user.Role.*;
 
 @Component
 public class DataLoader implements ApplicationListener<ContextRefreshedEvent> {
@@ -26,10 +27,10 @@ public class DataLoader implements ApplicationListener<ContextRefreshedEvent> {
 
     private void createRoles() {
         try {
-            groupService.save(new Group(Role.ROLE_ADMINISTRATOR));
-            groupService.save(new Group(Role.ROLE_ACCOUNTANT));
-            groupService.save(new Group(Role.ROLE_USER));
-            groupService.save(new Group(Role.ROLE_AUDITOR));
+            groupService.save(new Group(ROLE_ADMINISTRATOR));
+            groupService.save(new Group(ROLE_ACCOUNTANT));
+            groupService.save(new Group(ROLE_USER));
+            groupService.save(new Group(ROLE_AUDITOR));
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }

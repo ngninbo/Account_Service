@@ -5,7 +5,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -13,6 +12,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import static account.model.user.Role.*;
 
 @Configuration
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
@@ -41,18 +41,21 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
-                .exceptionHandling().accessDeniedHandler(accessDeniedHandler).and()
+                .exceptionHandling().accessDeniedHandler(accessDeniedHandler)
+                .and()
                 .httpBasic()
                 .authenticationEntryPoint(restAuthenticationEntryPoint) // Handle auth error
                 .and()
                 .csrf().disable().headers().frameOptions().disable() // for Postman, the H2 console
                 .and()
                 .authorizeRequests() // manage access
-                .mvcMatchers("/api/admin/**").hasRole("ADMINISTRATOR")
-                .mvcMatchers("/api/acct/**").hasRole("ACCOUNTANT")
-                .mvcMatchers(HttpMethod.POST, "/api/auth/changepass").hasAnyRole("USER", "ACCOUNTANT", "ADMINISTRATOR")
-                .mvcMatchers(HttpMethod.GET, "/api/empl/payment", "/api/empl/payment/*").hasAnyRole("USER", "ACCOUNTANT")
-                .mvcMatchers(HttpMethod.GET, "/api/security/events").hasRole("AUDITOR")
+                .mvcMatchers("/api/admin/**").hasRole(ROLE_ADMINISTRATOR.getDescription())
+                .mvcMatchers("/api/acct/**").hasRole(ROLE_ACCOUNTANT.getDescription())
+                .mvcMatchers(HttpMethod.POST, "/api/auth/changepass")
+                .hasAnyRole(ROLE_USER.getDescription(), ROLE_ACCOUNTANT.getDescription(), ROLE_ADMINISTRATOR.getDescription())
+                .mvcMatchers(HttpMethod.GET, "/api/empl/payment", "/api/empl/payment/*")
+                .hasAnyRole(ROLE_USER.getDescription(), ROLE_ACCOUNTANT.getDescription())
+                .mvcMatchers(HttpMethod.GET, "/api/security/events").hasRole(ROLE_AUDITOR.getDescription())
                 .antMatchers(HttpMethod.POST, "/api/signup").permitAll()
                 // other matchers
                 .and()

@@ -1,6 +1,6 @@
 package account.handler;
 
-import account.model.event.Event;
+import account.model.event.EventBuilder;
 import account.service.event.EventService;
 import account.util.LogEvent;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,8 +32,12 @@ public class AccountServiceAccessDeniedHandler implements AccessDeniedHandler {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null) {
             var userDetails = (UserDetails) auth.getPrincipal();
-            var event = new Event(LogEvent.ACCESS_DENIED, userDetails.getUsername(), request.getRequestURI(), request.getRequestURI());
-            eventService.save(event);
+            var eb = EventBuilder.init()
+                    .withAction(LogEvent.ACCESS_DENIED)
+                    .withSubject(userDetails.getUsername())
+                    .withObject(request.getRequestURI())
+                    .withPath(request.getRequestURI());
+            eventService.save(eb.build());
             response.sendError(HttpStatus.FORBIDDEN.value(), "Access Denied!");
         }
     }

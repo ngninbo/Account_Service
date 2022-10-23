@@ -1,13 +1,9 @@
 package account.controller;
 
 import account.domain.user.PasswordChangeResponse;
-import account.domain.user.UserDeletionResponse;
-import account.exception.admin.AdminDeletionException;
-import account.exception.admin.InvalidRoleException;
-import account.exception.admin.RoleUpdateException;
-import account.exception.admin.UserNotFoundException;
+import account.domain.user.PasswordChangeResponseBuilder;
 import account.exception.payment.PasswordUpdateException;
-import account.model.event.Event;
+import account.model.event.EventBuilder;
 import account.model.user.*;
 import account.exception.*;
 import account.domain.user.UserDto;
@@ -15,7 +11,6 @@ import account.mapper.UserMapper;
 import account.service.event.EventService;
 import account.service.group.GroupService;
 import account.service.user.UserService;
-import account.util.LogEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -29,6 +24,10 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import java.util.List;
+
+import static account.model.user.Role.ROLE_ADMINISTRATOR;
+import static account.model.user.Role.ROLE_USER;
+import static account.util.LogEvent.*;
 
 @RestController
 @RequestMapping(path = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -60,15 +59,18 @@ public class UserController {
         }
 
         List<User> users = userService.findAll();
-        var group = groupService.findByRole(users.isEmpty() ? Role.ROLE_ADMINISTRATOR.name() : Role.ROLE_USER.name());
+        var group = groupService.findByRole(users.isEmpty() ? ROLE_ADMINISTRATOR.name() : ROLE_USER.name());
 
         user.setEmail(user.getEmail().toLowerCase());
         user.getGroups().add(group.orElseThrow());
         user.setPassword(encoder.encode(user.getPassword()));
         final User savedUser = userService.save(user);
-        var event = new Event(LogEvent.CREATE_USER, userDetails != null ? userDetails.getUsername() : "Anonymous",
-                user.getEmail(), httpServletRequest.getRequestURI());
-        eventService.save(event);
+        EventBuilder eb = EventBuilder.init()
+                .withAction(CREATE_USER)
+                .withPath(httpServletRequest.getRequestURI())
+                .withSubject(userDetails != null ? userDetails.getUsername() : "Anonymous")
+                .withObject(user.getEmail());
+        eventService.save(eb.build());
         return ResponseEntity.ok(mapper.toDto(savedUser));
     }
 
@@ -85,10 +87,13 @@ public class UserController {
         currentUser.setPassword(encoder.encode(request.getPassword()));
         currentUser = userService.save(currentUser);
 
-        var event = new Event(LogEvent.CHANGE_PASSWORD, username, username, httpServletRequest.getRequestURI());
-        eventService.save(event);
-        return ResponseEntity.ok(PasswordChangeResponse.builder()
-                .email(currentUser.getEmail().toLowerCase()).status(PasswordChangeResponse.DEFAULT_STATUS)
-                .build());
+        EventBuilder eb = EventBuilder.init()
+                .withAction(CHANGE_PASSWORD)
+                .withSubject(username)
+                .withObject(username)
+                .withPath(httpServletRequest.getRequestURI());
+
+        eventService.save(eb.build());
+        return ResponseEntity.ok(PasswordChangeResponseBuilder.init().withEmail(currentUser.getEmail().toLowerCase()).build());
     }
 }

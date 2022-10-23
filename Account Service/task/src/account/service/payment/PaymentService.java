@@ -50,7 +50,7 @@ public class PaymentService implements IPaymentService {
         }
 
         for(PaymentRequest request: payments) {
-            Optional<Payment> payment = paymentRepository.findByEmployee_EmailIgnoreCaseAndPeriod(request.getEmployee(), request.getPeriod());
+            Optional<Payment> payment = paymentRepository.findByEmployee_EmailIgnoreCaseAndPeriod(request.getEmail(), request.getPeriod());
             if (payment.isEmpty()) {
                 validateRequest(request);
                 paymentRepository.save(paymentMapper.mapToPayment(request));
@@ -69,7 +69,7 @@ public class PaymentService implements IPaymentService {
 
         try {
             var payment = paymentRepository.findByEmployee_EmailIgnoreCaseAndPeriod(
-                    request.getEmployee(), request.getPeriod());
+                    request.getEmail(), request.getPeriod());
             if (payment.isEmpty()){
                 paymentRepository.save(paymentMapper.mapToPayment(request));
             } else {

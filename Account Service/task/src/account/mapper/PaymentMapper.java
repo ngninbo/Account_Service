@@ -27,7 +27,7 @@ public class PaymentMapper {
     public Payment mapToPayment(PaymentRequest request) throws NoSuchElementException {
 
 
-        final Optional<User> employee = userService.findByEmail(request.getEmployee());
+        final Optional<User> employee = userService.findByEmail(request.getEmail());
         return Payment.builder()
                 .employee(employee.orElseThrow())
                 .period(request.getPeriod())
