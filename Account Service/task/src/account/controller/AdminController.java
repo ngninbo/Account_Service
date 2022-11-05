@@ -4,8 +4,6 @@ import account.domain.user.UserAccessResponse;
 import account.domain.user.UserDeletionResponse;
 import account.domain.user.UserDto;
 import account.exception.admin.AdminDeletionException;
-import account.exception.admin.InvalidRoleException;
-import account.exception.admin.RoleUpdateException;
 import account.exception.admin.UserNotFoundException;
 import account.mapper.UserMapper;
 import account.model.event.EventBuilder;
@@ -55,10 +53,10 @@ public class AdminController {
 
     @DeleteMapping("/user/{email}")
     public ResponseEntity<UserDeletionResponse> delete(@PathVariable String email,
-                                                       @AuthenticationPrincipal UserDetails userDetails)
-            throws UserNotFoundException, AdminDeletionException {
+                                                       @AuthenticationPrincipal UserDetails userDetails) {
 
-        final User user = userService.findByEmail(userDetails.getUsername()).orElseThrow();
+        final User user = userService.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new UserNotFoundException(String.format("User by name = %s not found", userDetails.getUsername())));
         if (user.isAdmin() && email.equals(userDetails.getUsername())) {
             throw new AdminDeletionException("Can't remove ADMINISTRATOR role!");
         }
@@ -75,8 +73,8 @@ public class AdminController {
     }
 
     @PutMapping("/user/role")
-    public ResponseEntity<UserDto> updateRole(@Valid @RequestBody RoleUpdateRequest request, @AuthenticationPrincipal UserDetails userDetails) throws UserNotFoundException,
-            RoleUpdateException, AdminDeletionException, InvalidRoleException {
+    public ResponseEntity<UserDto> updateRole(@Valid @RequestBody RoleUpdateRequest request,
+                                              @AuthenticationPrincipal UserDetails userDetails) {
         final UserDto userDto = userService.updateRole(request);
         EventBuilder eb = EventBuilder.init()
                 .withSubject(userDetails.getUsername())
@@ -96,7 +94,8 @@ public class AdminController {
     }
 
     @PutMapping("/user/access")
-    public ResponseEntity<UserAccessResponse> updateAccess(@Valid @RequestBody UserAccessUpdateRequest updateRequest, @AuthenticationPrincipal UserDetails userDetails) throws UserNotFoundException, AdminDeletionException, RoleUpdateException {
+    public ResponseEntity<UserAccessResponse> updateAccess(@Valid @RequestBody UserAccessUpdateRequest updateRequest,
+                                                           @AuthenticationPrincipal UserDetails userDetails) {
         var response = userService.updateAccess(updateRequest);
         EventBuilder eb = EventBuilder.init()
                 .withSubject(userDetails.getUsername())

@@ -52,7 +52,7 @@ public class UserController {
     }
 
     @PostMapping(path = "/auth/signup", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<UserDto> signup(@Valid @RequestBody User user, @AuthenticationPrincipal UserDetails userDetails) throws AccountServiceException {
+    public ResponseEntity<UserDto> signup(@Valid @RequestBody User user, @AuthenticationPrincipal UserDetails userDetails) {
 
         if (userService.findByEmail(user.getEmail()).isPresent()) {
             throw new AccountServiceException(HttpStatus.BAD_REQUEST.getReasonPhrase());

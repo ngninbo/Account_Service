@@ -4,7 +4,6 @@ import account.domain.payment.PaymentResponse;
 import account.model.payment.PaymentRequest;
 import account.service.payment.PaymentService;
 import account.util.PaymentUtil;
-import account.exception.payment.PaymentNotFoundException;
 import account.exception.payment.PaymentSavingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -30,19 +29,18 @@ public class PaymentController {
     }
 
     @PostMapping(path = "/acct/payments", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<PaymentResponse> update(@Valid @RequestBody List<PaymentRequest> payrolls) throws PaymentSavingException {
+    public ResponseEntity<PaymentResponse> update(@Valid @RequestBody List<PaymentRequest> payrolls) {
         return ResponseEntity.ok(paymentService.save(payrolls));
     }
 
     @PutMapping("/acct/payments")
-    public ResponseEntity<PaymentResponse> update(@Valid @RequestBody PaymentRequest request) throws PaymentSavingException {
+    public ResponseEntity<PaymentResponse> update(@Valid @RequestBody PaymentRequest request) {
         return ResponseEntity.ok(this.paymentService.save(request));
     }
 
     @GetMapping(path = "/empl/payment")
     public ResponseEntity<?> getPayroll(@AuthenticationPrincipal UserDetails userDetails,
-                                        @RequestParam(required = false) String period)
-            throws PaymentNotFoundException, PaymentSavingException {
+                                        @RequestParam(required = false) String period) {
 
         if (period == null) {
             return ResponseEntity.ok(paymentService.findAllByEmail(userDetails.getUsername()));

@@ -4,10 +4,6 @@ import account.domain.user.UserAccessResponse;
 import account.domain.user.UserDeletionResponse;
 import account.domain.user.UserDto;
 import account.model.user.*;
-import account.exception.admin.AdminDeletionException;
-import account.exception.admin.InvalidRoleException;
-import account.exception.admin.RoleUpdateException;
-import account.exception.admin.UserNotFoundException;
 
 import javax.transaction.Transactional;
 import java.util.List;
@@ -21,13 +17,13 @@ public interface IUserService {
 
     List<User> findAll();
 
-    UserDeletionResponse deleteUserByEmail(String email) throws UserNotFoundException, AdminDeletionException;
+    UserDeletionResponse deleteUserByEmail(String email);
 
-    UserDto updateRole(RoleUpdateRequest request) throws UserNotFoundException, InvalidRoleException, RoleUpdateException, AdminDeletionException;
+    UserDto updateRole(RoleUpdateRequest request);
 
-    UserDto grant(User user, Group group) throws RoleUpdateException;
+    UserDto grant(User user, Group group);
 
-    UserDto revoke(User user, Group group) throws RoleUpdateException, AdminDeletionException;
+    UserDto revoke(User user, Group group);
 
     User increaseFailedAttempts(User user);
 
@@ -37,5 +33,5 @@ public interface IUserService {
     @Transactional
     void lock(User user);
 
-    UserAccessResponse updateAccess(UserAccessUpdateRequest updateRequest) throws UserNotFoundException, AdminDeletionException, RoleUpdateException;
+    UserAccessResponse updateAccess(UserAccessUpdateRequest updateRequest);
 }

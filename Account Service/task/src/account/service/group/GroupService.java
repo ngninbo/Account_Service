@@ -28,10 +28,7 @@ public class GroupService implements IGroupService {
     @Transactional
     public Group save(Group group) {
         var tmp = this.repository.findByRole(group.getRole());
-        if (tmp.isPresent()) {
-            group.setId(tmp.get().getId());
-            return this.repository.save(group);
-        }
+        tmp.ifPresent(value -> group.setId(value.getId()));
         return repository.save(group);
     }
 }

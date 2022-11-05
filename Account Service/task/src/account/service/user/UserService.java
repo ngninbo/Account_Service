@@ -53,7 +53,7 @@ public class UserService implements IUserService {
 
     @Override
     @Transactional
-    public UserDeletionResponse deleteUserByEmail(String email) throws UserNotFoundException, AdminDeletionException {
+    public UserDeletionResponse deleteUserByEmail(String email) {
 
         var user = userRepository.findByEmailIgnoreCase(email).orElseThrow(() -> new UserNotFoundException("User not found!"));
         if (user.isAdmin()) {
@@ -65,7 +65,7 @@ public class UserService implements IUserService {
 
     @Override
     @Transactional
-    public UserDto updateRole(RoleUpdateRequest request) throws UserNotFoundException, InvalidRoleException, RoleUpdateException, AdminDeletionException {
+    public UserDto updateRole(RoleUpdateRequest request) {
         var user = userRepository.findByEmailIgnoreCase(request.getEmail()).orElseThrow(() -> new UserNotFoundException("User not found!"));
 
         String roleFromRequest = String.format("ROLE_%s", request.getRole());
@@ -87,18 +87,12 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public UserDto grant(User user, Group group) throws RoleUpdateException {
+    public UserDto grant(User user, Group group) {
         Role role = group.getRole();
 
-        if ((user.isAdmin() && isBusinessRole().test(role))) {
+        if ((user.isAdmin() && isBusinessRole().test(role)) || (!user.isAdmin() && Role.ROLE_ADMINISTRATOR.equals(role))) {
             throw new RoleUpdateException("The user cannot combine administrative and business roles!");
-        }
-
-        if ((!user.isAdmin() && Role.ROLE_ADMINISTRATOR.equals(role))) {
-            throw new RoleUpdateException("The user cannot combine administrative and business roles!");
-        }
-
-        else {
+        } else {
             user.getGroups().add(group);
             user = this.userRepository.save(user);
             return userMapper.toDto(user);
@@ -106,7 +100,7 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public UserDto revoke(User user, Group group) throws RoleUpdateException, AdminDeletionException {
+    public UserDto revoke(User user, Group group) {
         Role role = group.getRole();
 
         if (user.isAdmin() && Role.ROLE_ADMINISTRATOR.equals(role)) {
@@ -149,8 +143,9 @@ public class UserService implements IUserService {
 
     @Override
     @Transactional
-    public UserAccessResponse updateAccess(UserAccessUpdateRequest request) throws UserNotFoundException, AdminDeletionException, RoleUpdateException {
-        var user = userRepository.findByEmailIgnoreCase(request.getEmail()).orElseThrow(() -> new UserNotFoundException("User not found!"));
+    public UserAccessResponse updateAccess(UserAccessUpdateRequest request) {
+        var user = userRepository.findByEmailIgnoreCase(request.getEmail())
+                .orElseThrow(() -> new UserNotFoundException("User not found!"));
         if (user.isAdmin()) {
             throw new AdminDeletionException("Can't lock the ADMINISTRATOR!");
         }

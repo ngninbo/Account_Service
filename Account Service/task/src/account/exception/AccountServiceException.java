@@ -1,6 +1,6 @@
 package account.exception;
 
-public class AccountServiceException extends Exception {
+public class AccountServiceException extends RuntimeException {
 
     public AccountServiceException(String message) {
         super(message);

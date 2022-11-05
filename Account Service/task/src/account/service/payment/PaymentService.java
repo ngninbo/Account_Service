@@ -34,14 +34,15 @@ public class PaymentService implements IPaymentService {
     }
 
     @Override
-    public PaymentDto findByEmailAndPeriod(String email, String period) throws PaymentNotFoundException {
-        Payment  payment = paymentRepository.findByEmployee_EmailIgnoreCaseAndPeriod(email, period).orElseThrow(() -> new PaymentNotFoundException("Payment not found for given period!"));
+    public PaymentDto findByEmailAndPeriod(String email, String period) {
+        Payment payment = paymentRepository.findByEmployee_EmailIgnoreCaseAndPeriod(email, period)
+                .orElseThrow(() -> new PaymentNotFoundException("Payment not found for given period!"));
         return paymentMapper.mapToDto(payment);
     }
 
     @Override
     @Transactional
-    public PaymentResponse save(List<PaymentRequest> payments) throws PaymentSavingException {
+    public PaymentResponse save(List<PaymentRequest> payments) {
 
         for (int i = 1; i < payments.size(); i++) {
             if (payments.get(i - 1).getPeriod().equals(payments.get(i).getPeriod())) {
@@ -50,7 +51,8 @@ public class PaymentService implements IPaymentService {
         }
 
         for(PaymentRequest request: payments) {
-            Optional<Payment> payment = paymentRepository.findByEmployee_EmailIgnoreCaseAndPeriod(request.getEmail(), request.getPeriod());
+            Optional<Payment> payment = paymentRepository
+                    .findByEmployee_EmailIgnoreCaseAndPeriod(request.getEmail(), request.getPeriod());
             if (payment.isEmpty()) {
                 validateRequest(request);
                 paymentRepository.save(paymentMapper.mapToPayment(request));
@@ -63,7 +65,7 @@ public class PaymentService implements IPaymentService {
 
     @Override
     @Transactional
-    public PaymentResponse save(PaymentRequest request) throws PaymentSavingException {
+    public PaymentResponse save(PaymentRequest request) {
 
         validateRequest(request);
 
@@ -94,7 +96,7 @@ public class PaymentService implements IPaymentService {
         return month <= 0 || month >= 12;
     }
 
-    private void validateRequest(PaymentRequest request) throws PaymentSavingException {
+    private void validateRequest(PaymentRequest request) {
         if (request.getSalary() < 0) {
             throw new PaymentSavingException("Salary can not be negativ!");
         }
