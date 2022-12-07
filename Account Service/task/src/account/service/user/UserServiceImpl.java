@@ -10,7 +10,7 @@ import account.exception.admin.AdminDeletionException;
 import account.exception.admin.InvalidRoleException;
 import account.exception.admin.RoleUpdateException;
 import account.exception.admin.UserNotFoundException;
-import account.service.group.GroupServiceImpl;
+import account.service.group.GroupService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -24,11 +24,11 @@ import java.util.function.Predicate;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-    private final GroupServiceImpl groupService;
+    private final GroupService groupService;
     private final UserMapper userMapper;
 
     @Autowired
-    public UserServiceImpl(UserRepository userRepository, GroupServiceImpl groupService, UserMapper userMapper) {
+    public UserServiceImpl(UserRepository userRepository, GroupService groupService, UserMapper userMapper) {
         this.userRepository = userRepository;
         this.groupService = groupService;
         this.userMapper = userMapper;
