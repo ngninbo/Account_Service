@@ -1,7 +1,7 @@
 package account.mapper;
 
 import account.model.user.Group;
-import account.service.group.GroupService;
+import account.service.group.GroupServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -12,10 +12,10 @@ import static account.model.user.Role.*;
 @Component
 public class DataLoader implements ApplicationListener<ContextRefreshedEvent> {
 
-    private final GroupService groupService;
+    private final GroupServiceImpl groupService;
 
     @Autowired
-    public DataLoader(GroupService groupService) {
+    public DataLoader(GroupServiceImpl groupService) {
         this.groupService = groupService;
     }
 

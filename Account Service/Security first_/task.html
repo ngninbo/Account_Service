@@ -1,4 +1,4 @@
-<html><body><h5 id="description">Description</h5>
+<h5 id="description">Description</h5>
 <p>You have probably heard a lot of stories about how hackers brute-force user passwords or exploit the weaknesses of the authentication mechanism. Let's figure out how to make our authentication procedure more secure. In the field of web application security, the most authoritative source is <a href="https://owasp.org/" rel="noopener noreferrer nofollow" target="_blank">OWASP</a> (Open Web Application Security Project). The project regularly publishes information about the most dangerous risks associated with the web (<a href="https://owasp.org/www-project-top-ten/" rel="noopener noreferrer nofollow" target="_blank">Top Ten</a>), as well as recommendations for fortifying security. For example, such recommendations can be found in the <a href="https://github.com/OWASP/ASVS" rel="noopener noreferrer nofollow" target="_blank">ASVS</a> (Application Security Verification Standard). To ensure the security of the authentication, the standard offers several dozen security measures, but the ACME Security Department has selected only a few of them, namely, the password security requirements.</p>
 <p>Here they are:</p>
 <ul>
@@ -116,4 +116,4 @@ encoder.matches("new_password", hashOfOldPassword)</code></pre>
     "error": "Bad Request",
     "message": "The passwords must be different!",
     "path": "/api/auth/changepass"
-}</code></pre></body></html>
+}</code></pre>

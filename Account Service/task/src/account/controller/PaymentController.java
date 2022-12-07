@@ -2,7 +2,7 @@ package account.controller;
 
 import account.domain.payment.PaymentResponse;
 import account.model.payment.PaymentRequest;
-import account.service.payment.PaymentService;
+import account.service.payment.PaymentServiceImpl;
 import account.util.PaymentUtil;
 import account.exception.payment.PaymentSavingException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,10 +21,10 @@ import java.util.List;
 @Validated
 public class PaymentController {
 
-    private final PaymentService paymentService;
+    private final PaymentServiceImpl paymentService;
 
     @Autowired
-    public PaymentController(PaymentService paymentService) {
+    public PaymentController(PaymentServiceImpl paymentService) {
         this.paymentService = paymentService;
     }
 

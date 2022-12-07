@@ -10,22 +10,24 @@
    <li>it's impossible to create an instance of an abstract class;</li> 
    <li>an abstract class can contain abstract methods that must be implemented in non-abstract subclasses;</li> 
    <li>it can contain fields and non-abstract methods (including static);</li> 
-   <li>an abstract class can extend another class, including abstract;</li> 
+   <li>an abstract class can extend another class, including an abstract one;</li> 
    <li>it can contain a constructor.</li> 
   </ul> 
+  <p> </p> 
   <p></p>
   <div class="alert alert-warning">
    As you can see, an abstract class has two main differences from regular (concrete) classes: 
    <strong>no instances</strong> and 
    <strong>abstract methods</strong>.
-  </div>
-  <p></p> 
+  </div> 
+  <p> </p> 
   <p><strong>Abstract methods</strong> are declared by adding the keyword <strong><code class="language-java">abstract</code></strong>. They have a declaration (modifiers, a return type, and a signature) but don't have an implementation. Each concrete (non-abstract) subclass must implement these methods.</p> 
+  <p> </p> 
   <p></p>
   <div class="alert alert-primary">
    Note, static methods can't be abstract!
-  </div>
-  <p></p> 
+  </div> 
+  <p> </p> 
   <h5 id="example" style="text-align: center;">Example</h5> 
   <p>Here is an abstract class <code class="language-java">Pet</code>:</p> 
   <pre><code class="language-java">public abstract class Pet {

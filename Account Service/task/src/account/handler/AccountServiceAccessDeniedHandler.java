@@ -1,7 +1,7 @@
 package account.handler;
 
 import account.model.event.EventBuilder;
-import account.service.event.EventService;
+import account.service.event.EventServiceImpl;
 import account.util.LogEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,11 +18,11 @@ import java.io.IOException;
 
 @Component
 public class AccountServiceAccessDeniedHandler implements AccessDeniedHandler {
-    private final EventService eventService;
+    private final EventServiceImpl eventService;
 
 
     @Autowired
-    public AccountServiceAccessDeniedHandler(EventService eventService) {
+    public AccountServiceAccessDeniedHandler(EventServiceImpl eventService) {
         this.eventService = eventService;
     }
 

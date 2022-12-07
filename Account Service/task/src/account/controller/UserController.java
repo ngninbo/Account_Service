@@ -8,9 +8,9 @@ import account.model.user.*;
 import account.exception.*;
 import account.domain.user.UserDto;
 import account.mapper.UserMapper;
-import account.service.event.EventService;
-import account.service.group.GroupService;
-import account.service.user.UserService;
+import account.service.event.EventServiceImpl;
+import account.service.group.GroupServiceImpl;
+import account.service.user.UserServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -34,15 +34,15 @@ import static account.util.LogEvent.*;
 @Validated
 public class UserController {
 
-    private final UserService userService;
+    private final UserServiceImpl userService;
     private final UserMapper mapper;
-    private final GroupService groupService;
-    private final EventService eventService;
+    private final GroupServiceImpl groupService;
+    private final EventServiceImpl eventService;
     private final PasswordEncoder encoder;
     private final HttpServletRequest httpServletRequest;
 
     @Autowired
-    public UserController(UserService userService, UserMapper mapper, PasswordEncoder encoder, GroupService groupService, EventService eventService, HttpServletRequest httpServletRequest) {
+    public UserController(UserServiceImpl userService, UserMapper mapper, PasswordEncoder encoder, GroupServiceImpl groupService, EventServiceImpl eventService, HttpServletRequest httpServletRequest) {
         this.userService = userService;
         this.mapper = mapper;
         this.encoder = encoder;

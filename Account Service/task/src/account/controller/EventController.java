@@ -2,7 +2,7 @@ package account.controller;
 
 import account.domain.EventDto;
 import account.mapper.EventMapper;
-import account.service.event.EventService;
+import account.service.event.EventServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -18,11 +18,11 @@ import java.util.List;
 @Validated
 public class EventController {
 
-    private final EventService eventService;
+    private final EventServiceImpl eventService;
     private final EventMapper mapper;
 
     @Autowired
-    public EventController(EventService eventService, EventMapper mapper) {
+    public EventController(EventServiceImpl eventService, EventMapper mapper) {
         this.eventService = eventService;
         this.mapper = mapper;
     }

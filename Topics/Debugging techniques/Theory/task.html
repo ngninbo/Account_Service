@@ -67,7 +67,7 @@ class Cat {
         this.age = age;
     }
 }</code></pre> 
-  <p>This code creates a <code class="language-java">Cat</code> object. This would be fine if it weren't for the negative age value that makes no sense. Naturally, in a more complex program, this may lead to various bugs. Such an object may be passed around for a long time before we see a problem, and when a problem arises, it is not always obvious what was the cause.</p> 
+  <p>This code creates a <code class="language-java">Cat</code> object. This would be fine if it wasn't for the negative age value that makes no sense. Naturally, in a more complex program, this may lead to various bugs. Such an object may be passed around for a long time before we see a problem, and when a problem arises, it is not always obvious what was the cause.</p> 
   <p>To prevent that from happening, we can use an assertion right in the <code class="language-java">Cat</code> constructor:</p> 
   <pre><code class="language-java">public Cat(String name, int age) {
     assert (age &gt;= 0) : "Invalid age";
