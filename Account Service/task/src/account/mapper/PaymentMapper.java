@@ -1,5 +1,7 @@
 package account.mapper;
 
+import account.domain.Salary;
+import account.domain.SalaryConverter;
 import account.domain.payment.PaymentDto;
 import account.model.payment.Payment;
 import account.model.payment.PaymentRequest;
@@ -39,7 +41,7 @@ public class PaymentMapper {
         return PaymentDto.builder().name(payment.getEmployee().getName())
                 .lastname(payment.getEmployee().getLastname())
                 .period(PaymentUtil.convertMonthFromPeriodToString(payment.getPeriod()))
-                .salary(PaymentUtil.getFullSalary(payment.getSalary()))
+                .salary(SalaryConverter.convert(payment.getSalary()))
                 .build();
     }
 

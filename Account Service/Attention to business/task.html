@@ -13,14 +13,10 @@
 </ul>
 <p>Changing the salary must be done in a separate corrective operation, <code class="language-json">PUT</code>. The previous data requirements remain, except for the uniqueness requirement. In this stage, we are not concerned with an employee-period pair.</p>
 <p>Salary information is provided to an employee upon successful authentication on the corresponding endpoint, while the request specifies the period for which the information should be provided. If the period is not specified, provide all available information in the form of an array of JSON objects. For convenience, convert the salary to <code class="language-json">X dollar(s) Y cent(s)</code>.</p>
-<p><button class="btn-sm btn-outline-secondary" onclick="getElementById('hint-1761').style.display='inline'">
-        Hint
-      </button>
-</p><div id="hint-1761" style="display:none;">Take a look at some useful articles for implementing transactions in Spring Boot:
-
+<p><b>Tip:</b> Take a look at some useful articles for implementing transactions in Spring Boot:</p>
 <p><a href="https://dzone.com/articles/spring-boot-transaction-management-hello-world-exa" rel="noopener noreferrer nofollow" target="_blank">Spring Boot Transaction Management</a> by DZone, <a href="https://www.baeldung.com/transaction-configuration-with-jpa-and-spring" rel="noopener noreferrer nofollow" target="_blank">Transactions with Spring and JPA</a> by Baelduing.</p>
 <p>For managing exceptions:</p>
-<p><a href="https://www.baeldung.com/spring-validate-list-controller" rel="noopener noreferrer nofollow" target="_blank">Validating Lists in a Spring Controller</a> by Baelding, <a href="https://mkyong.com/spring-boot/spring-rest-error-handling-example/" rel="noopener noreferrer nofollow" target="_blank">Spring REST Error Handling Example</a> by Mkyoung.</p></div>
+<p><a href="https://www.baeldung.com/spring-validate-list-controller" rel="noopener noreferrer nofollow" target="_blank">Validating Lists in a Spring Controller</a> by Baelding, <a href="https://mkyong.com/spring-boot/spring-rest-error-handling-example/" rel="noopener noreferrer nofollow" target="_blank">Spring REST Error Handling Example</a> by Mkyoung.</p>
 <h5 id="objectives">Objectives</h5>
 <p>Add the <code class="language-json">POST api/acct/payments</code> endpoint. It must be available to unauthorized users, accept data in JSON format, and store it in the database. The operation must be transactional! The JSON is as follows:</p>
 <pre><code class="language-json">[

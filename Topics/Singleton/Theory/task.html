@@ -3,7 +3,7 @@
  <head></head>
  <body>
   <p>Sometimes we need to have only a single instance of a class shared across an entire application. There is a special design pattern called <strong>Singleton</strong> that restricts the instantiation of a class to one object. The pattern ensures that there is only one instance of the class and provides global access to it for the outer world.</p> 
-  <p style="text-align: center;"><img alt="" height="195" src="https://ucarecdn.com/c4c50aab-5b46-4d4d-81c4-4699808d8ffa/" width="437"></p> 
+  <p style="text-align: center;"><img alt="singleton instance" height="195" src="https://ucarecdn.com/c4c50aab-5b46-4d4d-81c4-4699808d8ffa/" width="437"></p> 
   <p style="text-align: center;">The same instance is used by different clients (classes, methods)</p> 
   <p>Singletons often control access to resources such as database connections or sockets.</p> 
   <p>For example, a class that keeps the connection to the database can be written as a singleton: creating a connection object time after time will be quite bulky in terms of memory. If it is a singleton, then your application will work better and faster.</p> 
@@ -57,11 +57,12 @@ System.out.println(s2 == s3); // true because s2 and s3 refer the same object</c
 }</code></pre> 
   <p> </p> 
   <p>Even though the implementation of a singleton pattern contains few lines of code, it has an important feature: lazy initialization. It means that the singleton instance is not created until the <code class="language-java">getInstance</code> method is called for the first time. This technique ensures that singleton instances are created only when needed.</p> 
+  <p> </p> 
   <p></p>
   <div class="alert alert-warning">
     Note that you should use the provided singleton class only in one-thread environments because it is prone to multithreading issues. In other topics, we will consider techniques to write thread-safe singletons. 
-  </div>
-  <p></p> 
+  </div> 
+  <p> </p> 
   <h5 id="singleton-pattern-in-java-libraries" style="text-align: center;">Singleton pattern in Java libraries</h5> 
   <p>There are a lot of Singleton examples in the Java Class Library:</p> 
   <ul> 

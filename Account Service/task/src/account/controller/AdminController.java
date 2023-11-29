@@ -37,7 +37,10 @@ public class AdminController {
     private final HttpServletRequest httpServletRequest;
 
     @Autowired
-    public AdminController(UserService userService, UserMapper mapper, EventService eventService, HttpServletRequest httpServletRequest) {
+    public AdminController(UserService userService,
+                           UserMapper mapper,
+                           EventService eventService,
+                           HttpServletRequest httpServletRequest) {
         this.userService = userService;
         this.mapper = mapper;
         this.httpServletRequest = httpServletRequest;

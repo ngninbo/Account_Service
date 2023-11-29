@@ -12,8 +12,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class PaymentServiceImpl implements PaymentService {
@@ -44,10 +46,8 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional
     public PaymentResponse save(List<PaymentRequest> payments) {
 
-        for (int i = 1; i < payments.size(); i++) {
-            if (payments.get(i - 1).getPeriod().equals(payments.get(i).getPeriod())) {
-                throw new PaymentSavingException("Duplicated entry in payment list");
-            }
+        if (hasDuplicate(payments)) {
+            throw new PaymentSavingException("Duplicated entry in payment list");
         }
 
         for(PaymentRequest request: payments) {
@@ -61,6 +61,11 @@ public class PaymentServiceImpl implements PaymentService {
             }
         }
         return new PaymentResponse();
+    }
+
+    private boolean hasDuplicate(List<PaymentRequest> requests) {
+        Set<String> periods = new HashSet<>();
+        return requests.stream().anyMatch(rep -> !periods.add(rep.getPeriod()));
     }
 
     @Override

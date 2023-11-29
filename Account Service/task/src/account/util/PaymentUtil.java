@@ -7,12 +7,6 @@ import java.util.function.Predicate;
 
 public class PaymentUtil {
 
-    private static final int CENT = 100;
-
-    public static String getFullSalary(Long salary) {
-        return String.format("%s dollar(s) %s cent(s)", salary/ CENT,salary % CENT);
-    }
-
     public static String convertMonthFromPeriodToString(String period) {
         String[] periodArr = period.split("-");
         int month = Integer.parseInt(periodArr[0]);

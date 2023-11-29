@@ -2348,6 +2348,12 @@ files:
         UserAccessResponse updateAccess(UserAccessUpdateRequest updateRequest) throws UserNotFoundException, AdminDeletionException, RoleUpdateException;
     }
   learner_created: true
+- name: src/account/domain/Salary.java
+  visible: true
+  learner_created: true
+- name: src/account/domain/SalaryConverter.java
+  visible: true
+  learner_created: true
 feedback_link: https://hyperskill.org/learn/step/16607#comment
 status: Solved
 feedback:
