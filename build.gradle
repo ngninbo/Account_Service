@@ -24,12 +24,16 @@ subprojects {
 
     repositories {
         mavenCentral()
-        maven { url "https://packages.jetbrains.team/maven/p/academy/hyperskill-hspc" }
-		maven { url "https://jitpack.io" }
+        maven { url 'https://packages.jetbrains.team/maven/p/hyperskill-hs-test/maven' }
+        maven { url 'https://jitpack.io' }
     }
 
     dependencies {
         testImplementation 'com.github.hyperskill:hs-test:release-SNAPSHOT'
+        // https://mvnrepository.com/artifact/org.springdoc/springdoc-openapi-ui
+        implementation group: 'org.springdoc', name: 'springdoc-openapi-ui', version: '1.7.0'
+        // https://mvnrepository.com/artifact/org.springdoc/springdoc-openapi-webflux-ui
+        implementation group: 'org.springdoc', name: 'springdoc-openapi-webflux-ui', version: '1.7.0'
     }
 
     configurations.all {

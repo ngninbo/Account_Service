@@ -1,13 +1,14 @@
 package account.mapper;
 
 import account.model.user.Group;
+import account.model.user.Role;
 import account.service.group.GroupServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.stereotype.Component;
 
-import static account.model.user.Role.*;
+import java.util.Arrays;
 
 @Component
 public class DataLoader implements ApplicationListener<ContextRefreshedEvent> {
@@ -27,10 +28,9 @@ public class DataLoader implements ApplicationListener<ContextRefreshedEvent> {
 
     private void createRoles() {
         try {
-            groupService.save(new Group(ROLE_ADMINISTRATOR));
-            groupService.save(new Group(ROLE_ACCOUNTANT));
-            groupService.save(new Group(ROLE_USER));
-            groupService.save(new Group(ROLE_AUDITOR));
+            Arrays.stream(Role.values())
+                    .map(Group::new)
+                    .forEach(groupService::save);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }

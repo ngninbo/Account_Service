@@ -11,6 +11,10 @@ import account.mapper.UserMapper;
 import account.service.event.EventServiceImpl;
 import account.service.group.GroupServiceImpl;
 import account.service.user.UserServiceImpl;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -32,6 +36,7 @@ import static account.util.LogEvent.*;
 @RestController
 @RequestMapping(path = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
 @Validated
+@Tag(name = "Auth service")
 public class UserController {
 
     private final UserServiceImpl userService;
@@ -52,6 +57,14 @@ public class UserController {
     }
 
     @PostMapping(path = "/auth/signup", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Create new user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", useReturnTypeSchema = true),
+            @ApiResponse(responseCode = "400", description = "User exists! | Email must not be empty | " +
+                    "Email from given domain not allowed | The user name must not be empty | " +
+                    "The password is in the hacker's database! The password length must be at least 12 chars!"),
+            @ApiResponse(responseCode = "404", description = "Group not found")
+    })
     public ResponseEntity<UserDto> signup(@Valid @RequestBody User user, @AuthenticationPrincipal UserDetails userDetails) {
 
         if (userService.findByEmail(user.getEmail()).isPresent()) {
@@ -75,6 +88,12 @@ public class UserController {
     }
 
     @PostMapping(path = "/auth/changepass", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary= "Change user password")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", useReturnTypeSchema = true),
+            @ApiResponse(responseCode = "400", description = "The passwords must be different!"),
+            @ApiResponse(responseCode = "404", description = "User not found")
+    })
     public ResponseEntity<PasswordChangeResponse> changePassword(@Valid @RequestBody PasswordChangeRequest request,
                                                                  @AuthenticationPrincipal UserDetails userDetails) throws PasswordUpdateException {
 

@@ -12,6 +12,12 @@ import account.model.user.User;
 import account.model.user.UserAccessUpdateRequest;
 import account.service.event.EventService;
 import account.service.user.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +35,7 @@ import static account.util.LogEvent.*;
 @RestController
 @RequestMapping(path = "/api/admin", produces = MediaType.APPLICATION_JSON_VALUE)
 @Validated
+@Tag(name = "Admin service")
 public class AdminController {
 
     private final UserService userService;
@@ -49,12 +56,28 @@ public class AdminController {
 
 
     @GetMapping(path = "/user")
+    @Operation(summary = "Get list of all users")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = UserDto.class)) })})
     public ResponseEntity<List<UserDto>> findAll() {
         final List<User> users = userService.findAll();
         return ResponseEntity.ok(mapper.toList(users));
     }
 
     @DeleteMapping("/user/{email}")
+    @Operation(summary = "Delete user by mail")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Deleted successfully!",
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = UserDeletionResponse.class)) }),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Can't remove ADMINISTRATOR role!",
+                    content = @Content),
+            @ApiResponse(responseCode = "404", description = "User by given name not found | User not found!", content = @Content)})
     public ResponseEntity<UserDeletionResponse> delete(@PathVariable String email,
                                                        @AuthenticationPrincipal UserDetails userDetails) {
 
@@ -76,6 +99,16 @@ public class AdminController {
     }
 
     @PutMapping("/user/role")
+    @Operation(summary = "Grant or remove user role")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = UserDto.class)) }),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "The user cannot combine administrative and business roles! | Can't remove ADMINISTRATOR role! The user does not have a role! The user must have at least one role!",
+                    content = @Content),
+            @ApiResponse(responseCode = "404", description = "Unsupported operation! Role not found! | User not found!", content = @Content)})
     public ResponseEntity<UserDto> updateRole(@Valid @RequestBody RoleUpdateRequest request,
                                               @AuthenticationPrincipal UserDetails userDetails) {
         final UserDto userDto = userService.updateRole(request);
@@ -97,6 +130,16 @@ public class AdminController {
     }
 
     @PutMapping("/user/access")
+    @Operation(summary = "Lock or unlock user access")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = UserAccessResponse.class)) }),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Can't lock the ADMINISTRATOR! | Unsupported operation!",
+                    content = @Content),
+            @ApiResponse(responseCode = "404", description = "User not found!", content = @Content)})
     public ResponseEntity<UserAccessResponse> updateAccess(@Valid @RequestBody UserAccessUpdateRequest updateRequest,
                                                            @AuthenticationPrincipal UserDetails userDetails) {
         var response = userService.updateAccess(updateRequest);

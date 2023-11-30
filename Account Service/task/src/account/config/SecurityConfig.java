@@ -1,6 +1,7 @@
 package account.config;
 
 import account.handler.AccountServiceAccessDeniedHandler;
+import account.model.user.Role;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -52,9 +53,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .mvcMatchers("/api/admin/**").hasRole(ROLE_ADMINISTRATOR.getDescription())
                 .mvcMatchers("/api/acct/**").hasRole(ROLE_ACCOUNTANT.getDescription())
                 .mvcMatchers(HttpMethod.POST, "/api/auth/changepass")
-                .hasAnyRole(ROLE_USER.getDescription(), ROLE_ACCOUNTANT.getDescription(), ROLE_ADMINISTRATOR.getDescription())
+                .hasAnyRole(Role.getChangePassRoles())
                 .mvcMatchers(HttpMethod.GET, "/api/empl/payment", "/api/empl/payment/*")
-                .hasAnyRole(ROLE_USER.getDescription(), ROLE_ACCOUNTANT.getDescription())
+                .hasAnyRole(Role.getPaymentRoles())
                 .mvcMatchers(HttpMethod.GET, "/api/security/events").hasRole(ROLE_AUDITOR.getDescription())
                 .antMatchers(HttpMethod.POST, "/api/signup").permitAll()
                 // other matchers
