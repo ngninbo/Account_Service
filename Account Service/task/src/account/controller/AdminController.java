@@ -1,5 +1,6 @@
 package account.controller;
 
+import account.domain.AccountServiceCustomErrorMessage;
 import account.domain.user.UserAccessResponse;
 import account.domain.user.UserDeletionResponse;
 import account.domain.user.UserDto;
@@ -35,7 +36,7 @@ import static account.util.LogEvent.*;
 @RestController
 @RequestMapping(path = "/api/admin", produces = MediaType.APPLICATION_JSON_VALUE)
 @Validated
-@Tag(name = "Admin service")
+@Tag(name = "Admin service", description = "User management")
 public class AdminController {
 
     private final UserService userService;
@@ -56,18 +57,22 @@ public class AdminController {
 
 
     @GetMapping(path = "/user")
-    @Operation(summary = "Get list of all users")
+    @Operation(description = "Get list of all users")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = UserDto.class)) })})
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = UserDto.class)) }),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Access denied",
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = AccountServiceCustomErrorMessage.class)) }),})
     public ResponseEntity<List<UserDto>> findAll() {
         final List<User> users = userService.findAll();
         return ResponseEntity.ok(mapper.toList(users));
     }
 
     @DeleteMapping("/user/{email}")
-    @Operation(summary = "Delete user by mail")
+    @Operation(description = "Delete user by mail")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -76,8 +81,14 @@ public class AdminController {
             @ApiResponse(
                     responseCode = "400",
                     description = "Can't remove ADMINISTRATOR role!",
-                    content = @Content),
-            @ApiResponse(responseCode = "404", description = "User by given name not found | User not found!", content = @Content)})
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = AccountServiceCustomErrorMessage.class)) }),
+            @ApiResponse(responseCode = "401",
+                    description = "Access denied",
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = AccountServiceCustomErrorMessage.class)) }),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "User by given name not found | User not found!",
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = AccountServiceCustomErrorMessage.class)) })})
     public ResponseEntity<UserDeletionResponse> delete(@PathVariable String email,
                                                        @AuthenticationPrincipal UserDetails userDetails) {
 
@@ -99,7 +110,7 @@ public class AdminController {
     }
 
     @PutMapping("/user/role")
-    @Operation(summary = "Grant or remove user role")
+    @Operation(description = "Grant or remove user role")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -107,8 +118,14 @@ public class AdminController {
             @ApiResponse(
                     responseCode = "400",
                     description = "The user cannot combine administrative and business roles! | Can't remove ADMINISTRATOR role! The user does not have a role! The user must have at least one role!",
-                    content = @Content),
-            @ApiResponse(responseCode = "404", description = "Unsupported operation! Role not found! | User not found!", content = @Content)})
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = AccountServiceCustomErrorMessage.class)) }),
+            @ApiResponse(responseCode = "401",
+                    description = "Access denied",
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = AccountServiceCustomErrorMessage.class)) }),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Unsupported operation! Role not found! | User not found!",
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = AccountServiceCustomErrorMessage.class)) })})
     public ResponseEntity<UserDto> updateRole(@Valid @RequestBody RoleUpdateRequest request,
                                               @AuthenticationPrincipal UserDetails userDetails) {
         final UserDto userDto = userService.updateRole(request);
@@ -130,7 +147,7 @@ public class AdminController {
     }
 
     @PutMapping("/user/access")
-    @Operation(summary = "Lock or unlock user access")
+    @Operation(description = "Lock or unlock user access")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -138,8 +155,15 @@ public class AdminController {
             @ApiResponse(
                     responseCode = "400",
                     description = "Can't lock the ADMINISTRATOR! | Unsupported operation!",
-                    content = @Content),
-            @ApiResponse(responseCode = "404", description = "User not found!", content = @Content)})
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = AccountServiceCustomErrorMessage.class)) }),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Access denied",
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = AccountServiceCustomErrorMessage.class)) }),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "User not found!",
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = AccountServiceCustomErrorMessage.class)) })})
     public ResponseEntity<UserAccessResponse> updateAccess(@Valid @RequestBody UserAccessUpdateRequest updateRequest,
                                                            @AuthenticationPrincipal UserDetails userDetails) {
         var response = userService.updateAccess(updateRequest);

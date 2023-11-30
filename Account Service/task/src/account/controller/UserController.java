@@ -1,5 +1,6 @@
 package account.controller;
 
+import account.domain.AccountServiceCustomErrorMessage;
 import account.domain.user.PasswordChangeResponse;
 import account.domain.user.PasswordChangeResponseBuilder;
 import account.exception.payment.PasswordUpdateException;
@@ -12,6 +13,8 @@ import account.service.event.EventServiceImpl;
 import account.service.group.GroupServiceImpl;
 import account.service.user.UserServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,7 +39,7 @@ import static account.util.LogEvent.*;
 @RestController
 @RequestMapping(path = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
 @Validated
-@Tag(name = "Auth service")
+@Tag(name = "Auth service", description = "User access management")
 public class UserController {
 
     private final UserServiceImpl userService;
@@ -57,13 +60,16 @@ public class UserController {
     }
 
     @PostMapping(path = "/auth/signup", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Create new user")
+    @Operation(description = "Create new user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", useReturnTypeSchema = true),
-            @ApiResponse(responseCode = "400", description = "User exists! | Email must not be empty | " +
+            @ApiResponse(responseCode = "400",
+                    description = "User exists! | Email must not be empty | " +
                     "Email from given domain not allowed | The user name must not be empty | " +
-                    "The password is in the hacker's database! The password length must be at least 12 chars!"),
-            @ApiResponse(responseCode = "404", description = "Group not found")
+                    "The password is in the hacker's database! The password length must be at least 12 chars!",
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = AccountServiceCustomErrorMessage.class)) }),
+            @ApiResponse(responseCode = "404", description = "Group not found",
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = AccountServiceCustomErrorMessage.class)) })
     })
     public ResponseEntity<UserDto> signup(@Valid @RequestBody User user, @AuthenticationPrincipal UserDetails userDetails) {
 
@@ -88,11 +94,16 @@ public class UserController {
     }
 
     @PostMapping(path = "/auth/changepass", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary= "Change user password")
+    @Operation(description = "Change user password")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", useReturnTypeSchema = true),
             @ApiResponse(responseCode = "400", description = "The passwords must be different!"),
-            @ApiResponse(responseCode = "404", description = "User not found")
+            @ApiResponse(responseCode = "401",
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = AccountServiceCustomErrorMessage.class)) }),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "User not found",
+                    content = { @Content(mediaType = "application/json", schema = @Schema(implementation = AccountServiceCustomErrorMessage.class)) })
     })
     public ResponseEntity<PasswordChangeResponse> changePassword(@Valid @RequestBody PasswordChangeRequest request,
                                                                  @AuthenticationPrincipal UserDetails userDetails) throws PasswordUpdateException {

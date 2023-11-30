@@ -14,7 +14,7 @@ public class Salary {
 
     private final long cent;
 
-    public static Salary of(Long salary) {
+    public static Salary fromLong(Long salary) {
         return new Salary(salary / PERCENT, salary % PERCENT);
     }
 }
