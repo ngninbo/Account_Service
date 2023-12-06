@@ -4,26 +4,20 @@ import java.util.stream.Stream;
 
 public enum Role {
 
-    ROLE_ACCOUNTANT("ACCOUNTANT"),
-    ROLE_ADMINISTRATOR("ADMINISTRATOR"),
-    ROLE_AUDITOR("AUDITOR"),
-    ROLE_USER("USER");
-
-    private final String description;
-
-    Role(String description) {
-        this.description = description;
-    }
-
-    public String getDescription() {
-        return description;
-    }
+    ACCOUNTANT,
+    ADMINISTRATOR,
+    AUDITOR,
+    USER;
 
     public static String[] getChangePassRoles() {
-        return Stream.of(ROLE_USER, ROLE_ACCOUNTANT, ROLE_ADMINISTRATOR).map(Role::getDescription).toArray(String[]::new);
+        return Stream.of(USER, ACCOUNTANT, ADMINISTRATOR).map(Enum::name).toArray(String[]::new);
     }
 
     public static String[] getPaymentRoles() {
-        return Stream.of(ROLE_USER, ROLE_ACCOUNTANT).map(Role::getDescription).toArray(String[]::new);
+        return Stream.of(USER, ACCOUNTANT).map(Enum::name).toArray(String[]::new);
+    }
+
+    public String getName() {
+        return "ROLE_".concat(name());
     }
 }

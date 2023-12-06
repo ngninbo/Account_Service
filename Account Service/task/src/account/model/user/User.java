@@ -61,7 +61,7 @@ public class User {
     }
 
     public boolean isAdmin() {
-        return this.groups.stream().map(Group::getRole).collect(Collectors.toList()).contains(Role.ROLE_ADMINISTRATOR);
+        return this.groups.stream().map(Group::getRole).collect(Collectors.toList()).contains(Role.ADMINISTRATOR);
     }
 
     public boolean hasRole(Role role) {

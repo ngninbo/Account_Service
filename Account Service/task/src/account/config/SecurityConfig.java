@@ -50,13 +50,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .csrf().disable().headers().frameOptions().disable() // for Postman, the H2 console
                 .and()
                 .authorizeRequests() // manage access
-                .mvcMatchers("/api/admin/**").hasRole(ROLE_ADMINISTRATOR.getDescription())
-                .mvcMatchers("/api/acct/**").hasRole(ROLE_ACCOUNTANT.getDescription())
+                .mvcMatchers("/api/admin/**").hasRole(ADMINISTRATOR.name())
+                .mvcMatchers("/api/acct/**").hasRole(ACCOUNTANT.name())
                 .mvcMatchers(HttpMethod.POST, "/api/auth/changepass")
                 .hasAnyRole(Role.getChangePassRoles())
                 .mvcMatchers(HttpMethod.GET, "/api/empl/payment", "/api/empl/payment/*")
                 .hasAnyRole(Role.getPaymentRoles())
-                .mvcMatchers(HttpMethod.GET, "/api/security/events").hasRole(ROLE_AUDITOR.getDescription())
+                .mvcMatchers(HttpMethod.GET, "/api/security/events").hasRole(AUDITOR.name())
                 .antMatchers(HttpMethod.POST, "/api/signup").permitAll()
                 // other matchers
                 .and()

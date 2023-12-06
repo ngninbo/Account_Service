@@ -11,7 +11,7 @@ import account.domain.user.UserDto;
 import account.mapper.UserMapper;
 import account.service.event.EventServiceImpl;
 import account.service.group.GroupServiceImpl;
-import account.service.user.UserServiceImpl;
+import account.service.user.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -32,8 +32,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import java.util.List;
 
-import static account.model.user.Role.ROLE_ADMINISTRATOR;
-import static account.model.user.Role.ROLE_USER;
+import static account.model.user.Role.ADMINISTRATOR;
+import static account.model.user.Role.USER;
 import static account.util.LogEvent.*;
 
 @RestController
@@ -42,7 +42,7 @@ import static account.util.LogEvent.*;
 @Tag(name = "Auth service", description = "User access management")
 public class UserController {
 
-    private final UserServiceImpl userService;
+    private final UserService userService;
     private final UserMapper mapper;
     private final GroupServiceImpl groupService;
     private final EventServiceImpl eventService;
@@ -50,7 +50,7 @@ public class UserController {
     private final HttpServletRequest httpServletRequest;
 
     @Autowired
-    public UserController(UserServiceImpl userService, UserMapper mapper, PasswordEncoder encoder, GroupServiceImpl groupService, EventServiceImpl eventService, HttpServletRequest httpServletRequest) {
+    public UserController(UserService userService, UserMapper mapper, PasswordEncoder encoder, GroupServiceImpl groupService, EventServiceImpl eventService, HttpServletRequest httpServletRequest) {
         this.userService = userService;
         this.mapper = mapper;
         this.encoder = encoder;
@@ -78,7 +78,7 @@ public class UserController {
         }
 
         List<User> users = userService.findAll();
-        var group = groupService.findByRole(users.isEmpty() ? ROLE_ADMINISTRATOR.name() : ROLE_USER.name());
+        var group = groupService.findByRole(users.isEmpty() ? ADMINISTRATOR.name() : USER.name());
 
         user.setEmail(user.getEmail().toLowerCase());
         user.getGroups().add(group.orElseThrow());

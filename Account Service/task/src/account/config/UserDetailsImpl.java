@@ -62,7 +62,7 @@ public class UserDetailsImpl implements UserDetails {
     private List<GrantedAuthority> getRolesAndAuthorities(User user) {
         return user.getGroups().stream()
                 .map(Group::getRole)
-                .map(role -> new SimpleGrantedAuthority(role.name()))
+                .map(role -> new SimpleGrantedAuthority(role.getName()))
                 .collect(Collectors.toList());
     }
 }

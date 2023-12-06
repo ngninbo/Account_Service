@@ -17,7 +17,7 @@ public class UserMapper {
         List<Role> roles = user.getGroups()
                 .stream()
                 .map(Group::getRole)
-                .sorted(Comparator.comparing(Role::getDescription))
+                .sorted(Comparator.comparing(Enum::name))
                 .collect(Collectors.toList());
 
         return UserDto.builder()

@@ -88,7 +88,7 @@ public class UserServiceImpl implements UserService {
     public UserDto grant(User user, Group group) {
         Role role = group.getRole();
 
-        if ((user.isAdmin() && isBusinessRole().test(role)) || (!user.isAdmin() && Role.ROLE_ADMINISTRATOR.equals(role))) {
+        if ((user.isAdmin() && isBusinessRole().test(role)) || (!user.isAdmin() && Role.ADMINISTRATOR.equals(role))) {
             throw new RoleUpdateException("The user cannot combine administrative and business roles!");
         } else {
             user.getGroups().add(group);
@@ -101,7 +101,7 @@ public class UserServiceImpl implements UserService {
     public UserDto revoke(User user, Group group) {
         Role role = group.getRole();
 
-        if (user.isAdmin() && Role.ROLE_ADMINISTRATOR.equals(role)) {
+        if (user.isAdmin() && Role.ADMINISTRATOR.equals(role)) {
             throw new AdminDeletionException("Can't remove ADMINISTRATOR role!");
         }
 
@@ -163,6 +163,6 @@ public class UserServiceImpl implements UserService {
     }
 
     private Predicate<Role> isBusinessRole() {
-        return role -> Role.ROLE_USER.equals(role) || Role.ROLE_ACCOUNTANT.equals(role) || Role.ROLE_AUDITOR.equals(role);
+        return role -> Role.USER.equals(role) || Role.ACCOUNTANT.equals(role) || Role.AUDITOR.equals(role);
     }
 }
